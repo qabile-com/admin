@@ -86,7 +86,7 @@ export function AdminShell({
             ))}
           </nav>
 
-          <div className="mt-auto rounded-xl border bg-black/20 p-4">
+          {/* <div className="mt-auto rounded-xl border bg-black/20 p-4">
             <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-orange-400/10 text-orange-100">
               <ShieldCheck className="size-5" />
             </div>
@@ -95,7 +95,7 @@ export function AdminShell({
               Data access is isolated in repositories so the API handoff stays
               tidy.
             </p>
-          </div>
+          </div> */}
         </div>
       </aside>
 

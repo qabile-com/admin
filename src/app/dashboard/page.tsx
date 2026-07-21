@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, Flame, TrendingUp, Users } from "lucide-react";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,33 +16,35 @@ import { CoursesTable } from "@/features/courses/courses-table";
 export default function DashboardPage() {
   const { accessToken } = useAuth();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "courses">("users");
+  const searchParams = useSearchParams();
 
-  // Mark component as mounted on the client
+  const [mounted, setMounted] = useState(false);
+
+  // Derive the active tab directly from the URL query string
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam === "courses" ? "courses" : "users";
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
-  // Redirect if no token after mount
   useEffect(() => {
     if (mounted && !accessToken) {
       router.replace("/");
     }
   }, [mounted, accessToken, router]);
 
-  // Fetch overview, users, courses (only after mount to avoid server requests)
   const { data: overview, loading: overviewLoading } = useOverview();
   const usersHook = useUsers({ limit: 10, offset: 0 });
   const coursesHook = useCourses({ limit: 10, offset: 0 });
 
-  // Return consistent empty state for server and initial client
-  if (!mounted) {
-    return null; // or a loading skeleton
-  }
+  // Change tab by updating the URL (this is used by the in‑page tab buttons)
+  const switchTab = (tab: "users" | "courses") => {
+    router.replace(`/dashboard?tab=${tab}`);
+  };
 
-  // Stat cards from overview
+  if (!mounted) return null;
+
   const statCards = [
     { label: "Total users", value: overview?.usersCount ?? "...", icon: Users },
     { label: "Admins", value: overview?.adminsCount ?? "...", icon: Flame },
@@ -84,20 +86,19 @@ export default function DashboardPage() {
         <TabsList>
           <TabsTrigger
             active={activeTab === "users"}
-            onClick={() => setActiveTab("users")}
+            onClick={() => switchTab("users")}
           >
             Users
           </TabsTrigger>
           <TabsTrigger
             active={activeTab === "courses"}
-            onClick={() => setActiveTab("courses")}
+            onClick={() => switchTab("courses")}
           >
             Courses
           </TabsTrigger>
         </TabsList>
       </section>
 
-      {/* Tables with real data */}
       <section className="mt-4">
         {activeTab === "users" ? (
           <UsersTable
