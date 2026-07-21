@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, Flame, TrendingUp, Users } from "lucide-react";
 import { AdminShell } from "@/components/layout/admin-shell";
@@ -13,7 +13,7 @@ import { useCourses } from "@/hooks/use-courses";
 import { UsersTable } from "@/features/users/users-table";
 import { CoursesTable } from "@/features/courses/courses-table";
 
-export default function DashboardPage() {
+export function DashboardContent() {
   const { accessToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -129,5 +129,16 @@ export default function DashboardPage() {
         )}
       </section>
     </AdminShell>
+  );
+}
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6 text-muted-foreground">Loading dashboard...</div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }
