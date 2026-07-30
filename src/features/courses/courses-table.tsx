@@ -434,10 +434,10 @@ function EpisodeRow({
 }: {
   episode: Episode;
   onMove: (ep: Episode, dir: "up" | "down") => void;
-  onUpdate: (data: { sortOrder?: number; views?: number }) => Promise<void>;
+  onUpdate: (data: Partial<Episode>) => Promise<void>;
 }) {
   const [showComments, setShowComments] = useState(false);
-  // Use durationSeconds if available, fallback to time
+  const [showEdit, setShowEdit] = useState(false);
   const durationSec = episode.durationSeconds ?? episode.time ?? 0;
 
   return (
@@ -465,6 +465,9 @@ function EpisodeRow({
           >
             <MoveDown className="size-4" />
           </Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowEdit(true)}>
+            <Pencil className="size-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -477,6 +480,12 @@ function EpisodeRow({
       {showComments && (
         <CommentsSection courseId={episode.courseId} episodeId={episode.id} />
       )}
+      <EditEpisodeDialog
+        episode={episode}
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        onUpdate={onUpdate}
+      />
     </div>
   );
 }
@@ -1191,6 +1200,195 @@ function AddEpisodeDialog({
           </Button>
           <Button type="submit" form="add-episode-form" disabled={submitting}>
             {submitting ? "Adding..." : "Add Episode"}
+          </Button>
+        </div>
+      </Dialog.Footer>
+    </Dialog>
+  );
+}
+
+function EditEpisodeDialog({
+  episode,
+  open,
+  onOpenChange,
+  onUpdate,
+}: {
+  episode: Episode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdate: (data: Partial<Episode>) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    title: episode.title,
+    subtitle: episode.subtitle || "",
+    description: episode.description || "",
+    category: episode.category || "",
+    imageUrl: episode.imageUrl || episode.coverUrl || "",
+    videoUrl: episode.videoUrl || "",
+    durationSeconds: String(episode.durationSeconds ?? episode.time ?? 0),
+    xp: String(episode.xp || 0),
+    sortOrder: String(episode.sortOrder || 0),
+    views: String(episode.views || 0),
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  // Sync form when episode prop changes (dialog opened for different episode)
+  useEffect(() => {
+    setForm({
+      title: episode.title,
+      subtitle: episode.subtitle || "",
+      description: episode.description || "",
+      category: episode.category || "",
+      imageUrl: episode.imageUrl || episode.coverUrl || "",
+      videoUrl: episode.videoUrl || "",
+      durationSeconds: String(episode.durationSeconds ?? episode.time ?? 0),
+      xp: String(episode.xp || 0),
+      sortOrder: String(episode.sortOrder || 0),
+      views: String(episode.views || 0),
+    });
+    setError("");
+  }, [episode]);
+
+  const handleChange = (field: string, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      await onUpdate({
+        title: form.title,
+        subtitle: form.subtitle || undefined,
+        description: form.description || undefined,
+        category: form.category || undefined,
+        imageUrl: form.imageUrl || undefined,
+        videoUrl: form.videoUrl || undefined,
+        durationSeconds: Number(form.durationSeconds),
+        xp: Number(form.xp),
+        sortOrder: Number(form.sortOrder),
+        views: Number(form.views) || 0,
+      });
+      onOpenChange(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update episode");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog.Header onClose={() => onOpenChange(false)}>
+        Edit Episode
+      </Dialog.Header>
+      <Dialog.Body>
+        <form
+          id="edit-episode-form"
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
+          {error && (
+            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Title</span>
+            <Input
+              value={form.title}
+              onChange={(e) => handleChange("title", e.target.value)}
+              required
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Subtitle</span>
+            <Input
+              value={form.subtitle}
+              onChange={(e) => handleChange("subtitle", e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Description</span>
+            <Input
+              value={form.description}
+              onChange={(e) => handleChange("description", e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Category</span>
+            <Input
+              value={form.category}
+              onChange={(e) => handleChange("category", e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Image / Cover URL</span>
+            <Input
+              value={form.imageUrl}
+              onChange={(e) => handleChange("imageUrl", e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Video URL</span>
+            <Input
+              value={form.videoUrl}
+              onChange={(e) => handleChange("videoUrl", e.target.value)}
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <label className="space-y-2">
+              <span className="text-sm font-bold">Duration (s)</span>
+              <Input
+                type="number"
+                value={form.durationSeconds}
+                onChange={(e) =>
+                  handleChange("durationSeconds", e.target.value)
+                }
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">XP</span>
+              <Input
+                type="number"
+                value={form.xp}
+                onChange={(e) => handleChange("xp", e.target.value)}
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">Sort Order</span>
+              <Input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => handleChange("sortOrder", e.target.value)}
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">Views</span>
+              <Input
+                type="number"
+                value={form.views}
+                onChange={(e) => handleChange("views", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Usually updated automatically.
+              </p>
+            </label>
+          </div>
+        </form>
+      </Dialog.Body>
+      <Dialog.Footer>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-episode-form" disabled={submitting}>
+            {submitting ? "Saving..." : "Save"}
           </Button>
         </div>
       </Dialog.Footer>
