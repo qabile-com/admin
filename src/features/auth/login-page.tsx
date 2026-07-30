@@ -47,8 +47,8 @@ export function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  // ─── State ──────────────────────────────
-  const [activeMode, setActiveMode] = useState<LoginMode>("password");
+  // Default to OTP mode
+  const [activeMode, setActiveMode] = useState<LoginMode>("otp");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -83,16 +83,13 @@ export function LoginPage() {
     try {
       const response = await apiClient.post<LoginResponse>(
         "/api/v1/auth/login",
-        {
-          email,
-          password,
-        },
+        { email, password },
       );
       const data = response.data;
 
       if (data.mode === "otp") {
         setOtpSent(true);
-        setActiveMode("otp"); // server wants OTP even with password
+        setActiveMode("otp");
       } else if (data.accessToken && data.refreshToken) {
         login(data.accessToken, data.refreshToken, data.user ?? null);
         router.push("/dashboard");
@@ -131,10 +128,7 @@ export function LoginPage() {
     try {
       const response = await apiClient.post<LoginResponse>(
         "/api/v1/auth/otp/verify",
-        {
-          email,
-          code: otpCode,
-        },
+        { email, code: otpCode },
       );
       const data = response.data;
       if (data.accessToken && data.refreshToken) {
@@ -201,9 +195,8 @@ export function LoginPage() {
         password: newPassword,
         passwordConfirmation: confirmPassword,
       });
-      // Reset completed – go back to login
       resetAll();
-      setActiveMode("password");
+      setActiveMode("password"); // after reset, go to password login
     } catch (err: unknown) {
       setError(
         (err as any)?.response?.data?.message || "Password reset failed.",
@@ -216,7 +209,7 @@ export function LoginPage() {
   // ─── UI ──────────────────────────────────
   return (
     <main className="grid min-h-dvh lg:grid-cols-[1.05fr_0.95fr]">
-      {/* Left Hero Section (unchanged) */}
+      {/* Left Hero Section */}
       <section className="relative hidden overflow-hidden border-r lg:block">
         <Image
           src="/assets/hero-phoenix.webp"
@@ -274,15 +267,6 @@ export function LoginPage() {
             {activeMode !== "forgot" && (
               <TabsList className="mb-6">
                 <TabsTrigger
-                  active={activeMode === "password"}
-                  onClick={() => {
-                    setActiveMode("password");
-                    resetAll();
-                  }}
-                >
-                  Password
-                </TabsTrigger>
-                <TabsTrigger
                   active={activeMode === "otp"}
                   onClick={() => {
                     setActiveMode("otp");
@@ -290,6 +274,15 @@ export function LoginPage() {
                   }}
                 >
                   Email OTP
+                </TabsTrigger>
+                <TabsTrigger
+                  active={activeMode === "password"}
+                  onClick={() => {
+                    setActiveMode("password");
+                    resetAll();
+                  }}
+                >
+                  Password
                 </TabsTrigger>
               </TabsList>
             )}
@@ -367,7 +360,17 @@ export function LoginPage() {
 
             {/* ─── Email OTP Form ──────────── */}
             {activeMode === "otp" && (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!otpSent) {
+                    handleRequestOtp();
+                  } else {
+                    handleVerifyOtp(e);
+                  }
+                }}
+                className="space-y-4"
+              >
                 <label className="block space-y-2">
                   <span className="text-sm font-bold">Email</span>
                   <div className="relative">
@@ -379,6 +382,8 @@ export function LoginPage() {
                       type="email"
                       autoComplete="email"
                       required
+                      readOnly={otpSent}
+                      disabled={otpSent}
                     />
                   </div>
                 </label>
@@ -397,33 +402,26 @@ export function LoginPage() {
 
                 {error && <ErrorBox>{error}</ErrorBox>}
 
-                {!otpSent ? (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    disabled={loading || !email}
-                    onClick={handleRequestOtp}
-                  >
-                    {loading ? (
-                      <Loader2 className="animate-spin size-4 mr-2" />
-                    ) : null}
-                    Send OTP
-                  </Button>
-                ) : (
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <Loader2 className="animate-spin size-4 mr-2" />
-                    ) : null}
-                    Verify OTP
-                  </Button>
-                )}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading || !email}
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin size-4 mr-2" />
+                  ) : null}
+                  {!otpSent
+                    ? "Send OTP"
+                    : loading
+                      ? "Verifying..."
+                      : "Verify OTP"}
+                </Button>
               </form>
             )}
 
             {/* ─── Forgot Password Flow ────── */}
             {activeMode === "forgot" && (
               <div className="space-y-4">
-                {/* Back button */}
                 <button
                   type="button"
                   onClick={() => {
@@ -435,7 +433,6 @@ export function LoginPage() {
                   <ArrowLeft className="size-4" /> Back to login
                 </button>
 
-                {/* Step 1: Request OTP */}
                 {forgotStep === "request" && (
                   <form onSubmit={handleForgotRequest} className="space-y-4">
                     <label className="block space-y-2">
@@ -458,7 +455,6 @@ export function LoginPage() {
                   </form>
                 )}
 
-                {/* Step 2: Verify OTP */}
                 {forgotStep === "verify" && (
                   <form onSubmit={handleForgotVerify} className="space-y-4">
                     <p className="text-sm text-muted-foreground">
@@ -480,7 +476,6 @@ export function LoginPage() {
                   </form>
                 )}
 
-                {/* Step 3: Set new password */}
                 {forgotStep === "reset" && (
                   <form onSubmit={handlePasswordReset} className="space-y-4">
                     <label className="block space-y-2">
@@ -521,7 +516,6 @@ export function LoginPage() {
   );
 }
 
-// Tiny error box component
 function ErrorBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
