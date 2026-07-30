@@ -130,7 +130,8 @@ export function CoursesTable({
                 <TableHead className="w-10">Order</TableHead>
                 <TableHead>Course</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>XP</TableHead>
+                <TableHead>Level</TableHead>
+                <TableHead>XP Price</TableHead>
                 <TableHead className="hidden md:table-cell">Duration</TableHead>
                 <TableHead className="hidden md:table-cell">Views</TableHead>
                 <TableHead className="w-20">Actions</TableHead>
@@ -141,7 +142,7 @@ export function CoursesTable({
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="py-8 text-center text-muted-foreground"
                   >
                     Loading courses...
@@ -150,7 +151,7 @@ export function CoursesTable({
               ) : courses.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="py-8 text-center text-muted-foreground"
                   >
                     No courses found.
@@ -159,6 +160,9 @@ export function CoursesTable({
               ) : (
                 courses.map((course) => {
                   const isOpen = openCourseId === course.id;
+                  // Use durationSeconds if available, fallback to duration
+                  const durationSec =
+                    course.durationSeconds ?? course.duration ?? 0;
                   return (
                     <Fragment key={course.id}>
                       <TableRow
@@ -207,9 +211,10 @@ export function CoursesTable({
                         <TableCell>
                           <Badge>{course.category}</Badge>
                         </TableCell>
-                        <TableCell>{course.xp}</TableCell>
+                        <TableCell>{course.level || "—"}</TableCell>
+                        <TableCell>{course.xpPrice ?? course.xp}</TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {Math.floor(course.duration / 60)}m
+                          {Math.floor(durationSec / 60)}m
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {course.views.toLocaleString()}
@@ -253,7 +258,7 @@ export function CoursesTable({
                       </TableRow>
                       {isOpen && (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={8} className="bg-black/20 p-4">
+                          <TableCell colSpan={9} className="bg-black/20 p-4">
                             <CourseDetailPanel courseId={course.id} />
                           </TableCell>
                         </TableRow>
@@ -432,6 +437,8 @@ function EpisodeRow({
   onUpdate: (data: { sortOrder?: number; views?: number }) => Promise<void>;
 }) {
   const [showComments, setShowComments] = useState(false);
+  // Use durationSeconds if available, fallback to time
+  const durationSec = episode.durationSeconds ?? episode.time ?? 0;
 
   return (
     <div className="rounded-lg border bg-black/20 p-3">
@@ -439,7 +446,7 @@ function EpisodeRow({
         <div>
           <p className="font-bold">{episode.title}</p>
           <p className="text-xs text-muted-foreground">
-            {Math.floor(episode.time / 60)}m · {episode.xp} XP · Order:{" "}
+            {Math.floor(durationSec / 60)}m · {episode.xp} XP · Order:{" "}
             {episode.sortOrder}
           </p>
         </div>
@@ -551,7 +558,9 @@ function CommentsSection({
       {comments.map((c) => (
         <div key={c.id} className="rounded border bg-black/10 p-2 text-sm">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-bold">{c.authorName}</span>
+            <span className="font-bold">
+              {c.authorDisplayName || c.authorName}
+            </span>
             <Badge
               variant={
                 c.moderationStatus === "approved"
@@ -600,8 +609,7 @@ function CommentsSection({
   );
 }
 
-// ─── Responsive Dialogs ──────────
-
+// ─── Create Course Dialog (updated fields) ──────────
 function CreateCourseDialog({
   open,
   onOpenChange,
@@ -619,10 +627,11 @@ function CreateCourseDialog({
     categories: "",
     gradient: "linear-gradient(135deg,#ffb347,#cc7a08)",
     imageUrl: "",
-    duration: "0",
+    durationSeconds: "0",
     views: "0",
     sortOrder: "1",
-    xp: "0",
+    xpPrice: "0",
+    level: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -641,10 +650,11 @@ function CreateCourseDialog({
         categories: form.categories.split(",").map((s) => s.trim()),
         gradient: form.gradient,
         imageUrl: form.imageUrl,
-        duration: Number(form.duration),
+        durationSeconds: Number(form.durationSeconds),
         views: Number(form.views),
         sortOrder: Number(form.sortOrder),
-        xp: Number(form.xp),
+        xpPrice: Number(form.xpPrice),
+        level: form.level || undefined,
       });
       onOpenChange(false);
     } catch (err: unknown) {
@@ -701,18 +711,19 @@ function CreateCourseDialog({
               onChange={(e) => handleChange("categories", e.target.value)}
             />
           </label>
-          {/* <label className="space-y-2">
-            <span className="text-sm font-bold">Gradient CSS</span>
-            <Input
-              value={form.gradient}
-              onChange={(e) => handleChange("gradient", e.target.value)}
-            />
-          </label> */}
           <label className="space-y-2">
             <span className="text-sm font-bold">Image URL</span>
             <Input
               value={form.imageUrl}
               onChange={(e) => handleChange("imageUrl", e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Level</span>
+            <Input
+              value={form.level}
+              onChange={(e) => handleChange("level", e.target.value)}
+              placeholder="e.g. مبتدی, متوسط, پیشرفته"
             />
           </label>
 
@@ -721,8 +732,10 @@ function CreateCourseDialog({
               <span className="text-sm font-bold">Duration (seconds)</span>
               <Input
                 type="number"
-                value={form.duration}
-                onChange={(e) => handleChange("duration", e.target.value)}
+                value={form.durationSeconds}
+                onChange={(e) =>
+                  handleChange("durationSeconds", e.target.value)
+                }
               />
             </label>
             <label className="space-y-2">
@@ -745,11 +758,11 @@ function CreateCourseDialog({
               />
             </label>
             <label className="space-y-2">
-              <span className="text-sm font-bold">XP</span>
+              <span className="text-sm font-bold">XP Price</span>
               <Input
                 type="number"
-                value={form.xp}
-                onChange={(e) => handleChange("xp", e.target.value)}
+                value={form.xpPrice}
+                onChange={(e) => handleChange("xpPrice", e.target.value)}
               />
             </label>
           </div>
@@ -773,6 +786,7 @@ function CreateCourseDialog({
   );
 }
 
+// ─── Edit Course Dialog (updated fields) ──────────
 function EditCourseDialog({
   course,
   onClose,
@@ -792,10 +806,11 @@ function EditCourseDialog({
           categories: course.categories,
           gradient: course.gradient,
           imageUrl: course.imageUrl,
-          duration: course.duration,
+          durationSeconds: course.durationSeconds ?? course.duration,
           views: course.views,
           sortOrder: course.sortOrder,
-          xp: course.xp,
+          xpPrice: course.xpPrice ?? course.xp,
+          level: course.level,
         }
       : {},
   );
@@ -873,18 +888,19 @@ function EditCourseDialog({
               }
             />
           </label>
-          {/* <label className="space-y-2">
-            <span className="text-sm font-bold">Gradient CSS</span>
-            <Input
-              value={(form.gradient as string) || ""}
-              onChange={(e) => handleChange("gradient", e.target.value)}
-            />
-          </label> */}
           <label className="space-y-2">
             <span className="text-sm font-bold">Image URL</span>
             <Input
               value={(form.imageUrl as string) || ""}
               onChange={(e) => handleChange("imageUrl", e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Level</span>
+            <Input
+              value={(form.level as string) || ""}
+              onChange={(e) => handleChange("level", e.target.value)}
+              placeholder="e.g. مبتدی, متوسط, پیشرفته"
             />
           </label>
 
@@ -893,9 +909,9 @@ function EditCourseDialog({
               <span className="text-sm font-bold">Duration (s)</span>
               <Input
                 type="number"
-                value={form.duration || 0}
+                value={form.durationSeconds || 0}
                 onChange={(e) =>
-                  handleChange("duration", Number(e.target.value))
+                  handleChange("durationSeconds", Number(e.target.value))
                 }
               />
             </label>
@@ -918,11 +934,13 @@ function EditCourseDialog({
               />
             </label>
             <label className="space-y-2">
-              <span className="text-sm font-bold">XP</span>
+              <span className="text-sm font-bold">XP Price</span>
               <Input
                 type="number"
-                value={form.xp || 0}
-                onChange={(e) => handleChange("xp", Number(e.target.value))}
+                value={form.xpPrice || 0}
+                onChange={(e) =>
+                  handleChange("xpPrice", Number(e.target.value))
+                }
               />
             </label>
           </div>
@@ -1012,7 +1030,7 @@ function AddEpisodeDialog({
     category: "",
     imageUrl: "",
     videoUrl: "",
-    time: "0",
+    durationSeconds: "0",
     xp: "0",
     sortOrder: "1",
     views: "0",
@@ -1035,14 +1053,12 @@ function AddEpisodeDialog({
         category: form.category || undefined,
         imageUrl: form.imageUrl || undefined,
         videoUrl: form.videoUrl || undefined,
-        time: Number(form.time),
+        durationSeconds: Number(form.durationSeconds),
         xp: Number(form.xp),
         sortOrder: Number(form.sortOrder),
         views: Number(form.views) || 0,
-        // steps can be omitted or left empty for now
       });
       onCreated();
-      // Reset form
       setForm({
         title: "",
         subtitle: "",
@@ -1050,7 +1066,7 @@ function AddEpisodeDialog({
         category: "",
         imageUrl: "",
         videoUrl: "",
-        time: "0",
+        durationSeconds: "0",
         xp: "0",
         sortOrder: "1",
         views: "0",
@@ -1125,11 +1141,13 @@ function AddEpisodeDialog({
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="space-y-2">
-              <span className="text-sm font-bold">Time (s)</span>
+              <span className="text-sm font-bold">Duration (s)</span>
               <Input
                 type="number"
-                value={form.time}
-                onChange={(e) => handleChange("time", e.target.value)}
+                value={form.durationSeconds}
+                onChange={(e) =>
+                  handleChange("durationSeconds", e.target.value)
+                }
               />
             </label>
             <label className="space-y-2">

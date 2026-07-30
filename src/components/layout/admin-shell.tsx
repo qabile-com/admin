@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   BookOpen,
   Flame,
@@ -9,6 +12,11 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  Award,
+  Map,
+  MessageSquare,
+  Activity,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,30 +25,67 @@ import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
   {
-    href: "/dashboard?tab=users",
+    href: "/dashboard/users",
     label: "Users",
     icon: Users,
     activeKey: "users",
   },
   {
-    href: "/dashboard?tab=courses",
+    href: "/dashboard/courses",
     label: "Courses",
     icon: BookOpen,
     activeKey: "courses",
   },
+  // {
+  //   href: "/dashboard/admins",
+  //   label: "Admins",
+  //   icon: ShieldCheck,
+  //   activeKey: "admins",
+  // },
+  // {
+  //   href: "/dashboard/achievements",
+  //   label: "Achievements",
+  //   icon: Award,
+  //   activeKey: "achievements",
+  // },
+  // {
+  //   href: "/dashboard/roadmap",
+  //   label: "Roadmap",
+  //   icon: Map,
+  //   activeKey: "roadmap",
+  // },
+  // {
+  //   href: "/dashboard/forum",
+  //   label: "Forum",
+  //   icon: MessageSquare,
+  //   activeKey: "forum",
+  // },
+  // {
+  //   href: "/dashboard/activities",
+  //   label: "Activities",
+  //   icon: Activity,
+  //   activeKey: "activities",
+  // },
+  // {
+  //   href: "/dashboard/xp-rules",
+  //   label: "XP Rules",
+  //   icon: Zap,
+  //   activeKey: "xp-rules",
+  // },
 ];
 
-export function AdminShell({
-  activeTab,
-  children,
-}: {
-  activeTab: string;
-  children: React.ReactNode;
-}) {
+export function AdminShell({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
+  const pathname = usePathname();
+
+  // Determine active section from pathname
+  const activeKey =
+    navItems.find((item) => pathname.startsWith(item.href))?.activeKey || "";
+
   return (
     <div className="min-h-dvh">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r bg-black/20 p-4 backdrop-blur-xl lg:block">
+      {/* Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r bg-black/20 p-4 backdrop-blur-xl lg:block overflow-y-auto">
         <div className="flex h-full flex-col">
           <Link
             href="/dashboard"
@@ -76,7 +121,7 @@ export function AdminShell({
                 href={item.href}
                 className={cn(
                   "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                  activeTab === item.activeKey &&
+                  activeKey === item.activeKey &&
                     "bg-secondary text-foreground",
                 )}
               >
@@ -85,17 +130,6 @@ export function AdminShell({
               </Link>
             ))}
           </nav>
-
-          {/* <div className="mt-auto rounded-xl border bg-black/20 p-4">
-            <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-orange-400/10 text-orange-100">
-              <ShieldCheck className="size-5" />
-            </div>
-            <p className="text-sm font-bold">Endpoint-ready</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Data access is isolated in repositories so the API handoff stays
-              tidy.
-            </p>
-          </div> */}
         </div>
       </aside>
 
@@ -128,8 +162,6 @@ export function AdminShell({
                 size="sm"
                 onClick={() => {
                   logout();
-                  // Redirect is handled by auth context removal and dashboard protection,
-                  // but we can also programmatically redirect:
                   window.location.href = "/";
                 }}
               >
