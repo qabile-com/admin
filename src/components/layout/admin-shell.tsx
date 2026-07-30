@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
   Flame,
@@ -17,19 +17,17 @@ import {
   MessageSquare,
   Activity,
   Zap,
+  Menu,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useState } from "react";
 
 const navItems = [
-  {
-    href: "/dashboard/users",
-    label: "Users",
-    icon: Users,
-    activeKey: "users",
-  },
+  { href: "/dashboard/users", label: "Users", icon: Users, activeKey: "users" },
   {
     href: "/dashboard/courses",
     label: "Courses",
@@ -77,15 +75,21 @@ const navItems = [
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Determine active section from pathname
   const activeKey =
     navItems.find((item) => pathname.startsWith(item.href))?.activeKey || "";
 
+  const handleNavClick = (href: string) => {
+    setMobileMenuOpen(false);
+    router.push(href);
+  };
+
   return (
     <div className="min-h-dvh">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r bg-black/20 p-4 backdrop-blur-xl lg:block overflow-y-auto">
+      {/* Desktop Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r bg-black/20 p-4 backdrop-blur-xl lg:flex lg:flex-col overflow-y-auto">
         <div className="flex h-full flex-col">
           <Link
             href="/dashboard"
@@ -110,7 +114,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <nav className="mt-8 space-y-2">
             <Link
               href="/dashboard"
-              className="flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className={cn(
+                "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                pathname === "/dashboard" && "bg-secondary text-foreground",
+              )}
             >
               <LayoutDashboard className="size-4" />
               Overview
@@ -133,18 +140,97 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Slide-out menu */}
+          <div className="absolute inset-y-0 left-0 w-72 bg-card border-r p-4 flex flex-col overflow-y-auto animate-in slide-in-from-left">
+            <div className="flex items-center justify-between mb-6">
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3"
+              >
+                <Image
+                  src="/assets/phoenix_badge.webp"
+                  alt="Qabile phoenix badge"
+                  width={38}
+                  height={38}
+                  className="rounded-lg"
+                />
+                <span className="text-sm font-extrabold">Qabile Admin</span>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
+
+            <nav className="space-y-2">
+              <button
+                onClick={() => handleNavClick("/dashboard")}
+                className={cn(
+                  "flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  pathname === "/dashboard" && "bg-secondary text-foreground",
+                )}
+              >
+                <LayoutDashboard className="size-4" />
+                Overview
+              </button>
+              {navItems.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => handleNavClick(item.href)}
+                  className={cn(
+                    "flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    activeKey === item.activeKey &&
+                      "bg-secondary text-foreground",
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
       <main className="lg:pl-72">
         <header className="sticky top-0 z-10 border-b bg-background/72 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 lg:hidden">
-              <Image
-                src="/assets/phoenix_badge.webp"
-                alt="Qabile phoenix badge"
-                width={38}
-                height={38}
-                className="rounded-lg"
-              />
-              <span className="text-sm font-extrabold">Qabile Admin</span>
+            <div className="flex items-center gap-3">
+              {/* Hamburger button for mobile */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="size-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/assets/phoenix_badge.webp"
+                  alt="Qabile phoenix badge"
+                  width={38}
+                  height={38}
+                  className="rounded-lg hidden lg:block"
+                />
+                <span className="text-sm font-extrabold lg:hidden">
+                  Qabile Admin
+                </span>
+              </div>
             </div>
             <div className="hidden max-w-md flex-1 items-center gap-2 lg:flex">
               <Search className="size-4 text-muted-foreground" />
@@ -153,7 +239,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 placeholder="Search users, courses, IDs..."
               />
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" aria-label="Settings">
                 <Settings />
               </Button>
@@ -165,8 +251,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   window.location.href = "/";
                 }}
               >
-                <LogOut />
-                Logout
+                <LogOut className="size-4" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
