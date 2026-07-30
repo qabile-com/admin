@@ -640,6 +640,7 @@ function CreateCourseDialog({
     views: "0",
     sortOrder: "1",
     xpPrice: "0",
+    xp: "0",
     level: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -663,6 +664,7 @@ function CreateCourseDialog({
         views: Number(form.views),
         sortOrder: Number(form.sortOrder),
         xpPrice: Number(form.xpPrice),
+        xp: Number(form.xp),
         level: form.level || undefined,
       });
       onOpenChange(false);
@@ -774,6 +776,14 @@ function CreateCourseDialog({
                 onChange={(e) => handleChange("xpPrice", e.target.value)}
               />
             </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">XP</span>
+              <Input
+                type="number"
+                value={form.xp}
+                onChange={(e) => handleChange("xp", e.target.value)}
+              />
+            </label>
           </div>
         </form>
       </Dialog.Body>
@@ -818,7 +828,8 @@ function EditCourseDialog({
           durationSeconds: course.durationSeconds ?? course.duration,
           views: course.views,
           sortOrder: course.sortOrder,
-          xpPrice: course.xpPrice ?? course.xp,
+          xpPrice: course.xpPrice,
+          xp: course.xp,
           level: course.level,
         }
       : {},
@@ -950,6 +961,14 @@ function EditCourseDialog({
                 onChange={(e) =>
                   handleChange("xpPrice", Number(e.target.value))
                 }
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">XP</span>
+              <Input
+                type="number"
+                value={form.xp || 0}
+                onChange={(e) => handleChange("xp", Number(e.target.value))}
               />
             </label>
           </div>
