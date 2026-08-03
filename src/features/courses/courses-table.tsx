@@ -31,6 +31,7 @@ import {
   fetchEpisodeComments,
   moderateComment,
   deleteComment,
+  deleteEpisode,
   updateEpisode,
   reorderEpisodes,
   createEpisode,
@@ -324,6 +325,8 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(true);
   const [showAddEpisode, setShowAddEpisode] = useState(false);
+  const [deleteEpisodeDialog, setDeleteEpisodeDialog] =
+    useState<Episode | null>(null);
   const cancelledRef = useRef(false);
 
   const loadEpisodes = useCallback(() => {
@@ -378,6 +381,12 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
     loadEpisodes();
   };
 
+  const handleDeleteEpisode = async (episodeId: string) => {
+    await deleteEpisode(courseId, episodeId);
+    setDeleteEpisodeDialog(null);
+    loadEpisodes();
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border bg-white/[0.025] p-4">
@@ -412,6 +421,7 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
                     await updateEpisode(courseId, ep.id, data);
                     loadEpisodes();
                   }}
+                  onDelete={() => setDeleteEpisodeDialog(ep)}
                 />
               ))}
           </div>
@@ -423,6 +433,11 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
         onOpenChange={setShowAddEpisode}
         onCreated={handleEpisodeCreated}
       />
+      <DeleteEpisodeDialog
+        episode={deleteEpisodeDialog}
+        onClose={() => setDeleteEpisodeDialog(null)}
+        onConfirm={handleDeleteEpisode}
+      />
     </div>
   );
 }
@@ -431,10 +446,12 @@ function EpisodeRow({
   episode,
   onMove,
   onUpdate,
+  onDelete,
 }: {
   episode: Episode;
   onMove: (ep: Episode, dir: "up" | "down") => void;
   onUpdate: (data: Partial<Episode>) => Promise<void>;
+  onDelete: () => void;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -471,6 +488,14 @@ function EpisodeRow({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Delete session"
+            onClick={onDelete}
+          >
+            <Trash2 className="size-4 text-red-300" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setShowComments(!showComments)}
           >
             <LinkIcon className="size-4" />
@@ -487,6 +512,57 @@ function EpisodeRow({
         onUpdate={onUpdate}
       />
     </div>
+  );
+}
+
+function DeleteEpisodeDialog({
+  episode,
+  onClose,
+  onConfirm,
+}: {
+  episode: Episode | null;
+  onClose: () => void;
+  onConfirm: (episodeId: string) => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  if (!episode) return null;
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await onConfirm(episode.id);
+    } catch (err: unknown) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!episode} onOpenChange={onClose}>
+      <Dialog.Header>Delete Session</Dialog.Header>
+      <Dialog.Body>
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to delete <strong>{episode.title}</strong>? This
+          action cannot be undone.
+        </p>
+      </Dialog.Body>
+      <Dialog.Footer>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={loading}
+          >
+            {loading ? "Deleting..." : "Yes, delete"}
+          </Button>
+        </div>
+      </Dialog.Footer>
+    </Dialog>
   );
 }
 

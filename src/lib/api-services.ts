@@ -142,6 +142,13 @@ export const createEpisode = (
     .post<Episode>(`/api/v1/admin/courses/${courseId}/episodes`, data)
     .then((r) => r.data);
 
+export const deleteEpisode = (courseId: string, episodeId: string) =>
+  apiClient
+    .delete<{
+      success: boolean;
+    }>(`/api/v1/admin/courses/${courseId}/episodes/${episodeId}`)
+    .then((r) => r.data);
+
 export const updateEpisode = (
   courseId: string,
   episodeId: string,
