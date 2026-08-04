@@ -332,7 +332,7 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
   const loadEpisodes = useCallback(() => {
     setLoadingEpisodes(true);
     cancelledRef.current = false;
-    fetchEpisodes(courseId, { limit: 50 })
+    fetchEpisodes(courseId, { limit: 80 })
       .then((res) => {
         if (!cancelledRef.current) {
           setEpisodes(res.data);
