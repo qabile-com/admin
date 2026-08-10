@@ -1,15 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import {
-  Search,
-  Pin,
-  PinOff,
-  Trash2,
-  ChevronDown,
-  Heart,
-  ShieldBan,
-} from "lucide-react";
+import { Search, Pin, PinOff, Trash2, ChevronDown, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +18,7 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog } from "@/components/ui/dialog";
 import { useForumLikes } from "@/hooks/use-forum-likes";
 import { useForumBlocks } from "@/hooks/use-forum-blocks";
-import type { ForumPost, ForumBlock } from "@/types/api-types";
+import type { ForumPost } from "@/types/api-types";
 
 interface ForumTableProps {
   posts: ForumPost[];

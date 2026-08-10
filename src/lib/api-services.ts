@@ -12,6 +12,7 @@ import type {
   ForumLike,
   ForumBlock,
   XpRule,
+  ForumPostCooldownRule,
   Activity,
 } from "@/types/api-types";
 
@@ -204,7 +205,9 @@ export const deleteComment = (
   apiClient
     .delete<{
       success: boolean;
-    }>(`/api/v1/admin/courses/${courseId}/episodes/${episodeId}/comments/${commentId}`)
+    }>(
+      `/api/v1/admin/courses/${courseId}/episodes/${episodeId}/comments/${commentId}`,
+    )
     .then((r) => r.data);
 
 // ─── Achievements ────────────────────────────────
@@ -322,4 +325,17 @@ export const updateSignupXpRule = (data: {
 }) =>
   apiClient
     .patch<XpRule>("/api/v1/admin/xp-rules/signup", data)
+    .then((r) => r.data);
+
+export const fetchForumPostCooldownRule = () =>
+  apiClient
+    .get<ForumPostCooldownRule>("/api/v1/admin/forum/post-cooldown")
+    .then((r) => r.data);
+
+export const updateForumPostCooldownRule = (data: {
+  isActive: boolean;
+  hours: number;
+}) =>
+  apiClient
+    .patch<ForumPostCooldownRule>("/api/v1/admin/forum/post-cooldown", data)
     .then((r) => r.data);

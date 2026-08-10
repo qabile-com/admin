@@ -19,6 +19,7 @@ import {
   Zap,
   Menu,
   X,
+  Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,12 @@ const navItems = [
   //   label: "XP Rules",
   //   icon: Zap,
   //   activeKey: "xp-rules",
+  // },
+  // {
+  //   href: "/dashboard/forum-cooldown",
+  //   label: "Forum Cooldown",
+  //   icon: Timer,
+  //   activeKey: "forum-cooldown",
   // },
 ];
 

@@ -234,3 +234,10 @@ export interface XpRule {
   isActive: boolean;
   amount: number;
 }
+
+export interface ForumPostCooldownRule {
+  code: string;
+  title: string;
+  isActive: boolean;
+  hours: number;
+}
