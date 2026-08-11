@@ -24,7 +24,10 @@ export default function ForumCooldownPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Forum Cooldown"
+      description="Rate-limit how often members can publish posts."
+    >
       <ForumCooldownCard />
     </AdminShell>
   );
