@@ -22,18 +22,12 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("qabile_admin_auth");
-      window.location.href = "/";
-    }
-    return Promise.reject(error);
-  },
-);
-
 export default apiClient;
+
+// NOTE: 401s are handled exclusively by the refresh interceptor below.
+// A second, earlier interceptor used to hard-redirect to "/" on any 401, which
+// ran first and made the refresh flow unreachable — every token expiry logged
+// the admin out. Do not re-add one here.
 
 let isRefreshing = false;
 let failedQueue: Array<{

@@ -24,24 +24,13 @@ import { Input } from "@/components/ui/input";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import apiClient from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/utils";
+import type { AuthLoginResponse } from "@/types/api-types";
 
 // ─── Types ────────────────────────────────────
 type LoginMode = "password" | "otp" | "forgot";
 
-interface LoginResponse {
-  mode?: "otp";
-  success: boolean;
-  message?: string;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: string;
-  user?: {
-    id: string;
-    name: string;
-    email: string | null;
-    role: string;
-  };
-}
+type LoginResponse = AuthLoginResponse;
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -97,10 +86,7 @@ export function LoginPage() {
         setError("Unexpected response");
       }
     } catch (err: unknown) {
-      setError(
-        (err as any)?.response?.data?.message ||
-          "Login failed. Check credentials.",
-      );
+      setError(getErrorMessage(err, "Login failed. Check credentials."));
     } finally {
       setLoading(false);
     }
@@ -114,7 +100,7 @@ export function LoginPage() {
       await apiClient.post("/api/v1/auth/otp/request", { email });
       setOtpSent(true);
     } catch (err: unknown) {
-      setError((err as any)?.response?.data?.message || "Failed to send OTP.");
+      setError(getErrorMessage(err, "Failed to send OTP."));
     } finally {
       setLoading(false);
     }
@@ -138,7 +124,7 @@ export function LoginPage() {
         setError("OTP verification failed");
       }
     } catch (err: unknown) {
-      setError((err as any)?.response?.data?.message || "Invalid OTP code.");
+      setError(getErrorMessage(err, "Invalid OTP code."));
     } finally {
       setLoading(false);
     }
@@ -153,9 +139,7 @@ export function LoginPage() {
       await apiClient.post("/api/v1/auth/password/forgot/request", { email });
       setForgotStep("verify");
     } catch (err: unknown) {
-      setError(
-        (err as any)?.response?.data?.message || "Failed to send reset OTP.",
-      );
+      setError(getErrorMessage(err, "Failed to send reset OTP."));
     } finally {
       setLoading(false);
     }
@@ -174,7 +158,7 @@ export function LoginPage() {
       setVerificationToken(response.data.verificationToken);
       setForgotStep("reset");
     } catch (err: unknown) {
-      setError((err as any)?.response?.data?.message || "Invalid OTP code.");
+      setError(getErrorMessage(err, "Invalid OTP code."));
     } finally {
       setLoading(false);
     }
@@ -198,9 +182,7 @@ export function LoginPage() {
       resetAll();
       setActiveMode("password"); // after reset, go to password login
     } catch (err: unknown) {
-      setError(
-        (err as any)?.response?.data?.message || "Password reset failed.",
-      );
+      setError(getErrorMessage(err, "Password reset failed."));
     } finally {
       setLoading(false);
     }

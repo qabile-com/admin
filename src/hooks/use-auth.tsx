@@ -1,13 +1,13 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
-import type { AdminUser } from "@/types/api-types";
+import type { AuthUser } from "@/types/api-types";
 import apiClient from "@/lib/api-client";
 
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
-  user: Pick<AdminUser, "id" | "name" | "email" | "role"> | null;
+  user: AuthUser | null;
 }
 
 interface AuthContextType extends AuthState {
