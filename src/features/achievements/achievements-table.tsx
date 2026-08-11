@@ -1,14 +1,7 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import {
-  Search,
-  Plus,
-  Pencil,
-  Trash2,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { useState } from "react";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
+import { getErrorMessage, humanize } from "@/lib/utils";
 import type { Achievement } from "@/types/api-types";
 
 interface AchievementsTableProps {
@@ -131,7 +125,9 @@ export function AchievementsTable({
                   <TableRow key={a.id}>
                     <TableCell className="font-bold">{a.title}</TableCell>
                     <TableCell>{a.slug}</TableCell>
-                    <TableCell>{a.triggerType}</TableCell>
+                    <TableCell title={a.triggerType}>
+                      {humanize(a.triggerType)}
+                    </TableCell>
                     <TableCell>{a.threshold}</TableCell>
                     <TableCell>
                       <Badge variant={a.isActive ? "success" : "muted"}>
@@ -238,36 +234,47 @@ function CreateAchievementDialog({
     isShareable: true,
     isActive: true,
     threshold: "1",
+    xpEarned: "0",
     config: "{}",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (field: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    try {
-      let config = {};
+    setError("");
+
+    let config: Record<string, unknown> = {};
+    if (form.config.trim()) {
       try {
         config = JSON.parse(form.config);
-      } catch {}
+      } catch {
+        setError("Config must be valid JSON.");
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    try {
       await onSubmit({
         slug: form.slug,
         title: form.title,
         description: form.description,
-        imageUrl: form.imageUrl,
+        imageUrl: form.imageUrl || null,
         triggerType: form.triggerType,
         isRepeatable: form.isRepeatable,
         isShareable: form.isShareable,
         isActive: form.isActive,
         threshold: Number(form.threshold),
+        xpEarned: Number(form.xpEarned),
         config,
       });
       onOpenChange(false);
     } catch (err: unknown) {
-      console.error(err);
+      setError(getErrorMessage(err, "Failed to create the achievement"));
     } finally {
       setSubmitting(false);
     }
@@ -282,6 +289,11 @@ function CreateAchievementDialog({
           onSubmit={handleSubmit}
           className="space-y-4"
         >
+          {error && (
+            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
           <label className="space-y-2">
             <span className="text-sm font-bold">Slug</span>
             <Input
@@ -319,14 +331,26 @@ function CreateAchievementDialog({
               onChange={(e) => handleChange("triggerType", e.target.value)}
             />
           </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Threshold</span>
-            <Input
-              type="number"
-              value={form.threshold}
-              onChange={(e) => handleChange("threshold", e.target.value)}
-            />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-sm font-bold">Threshold</span>
+              <Input
+                type="number"
+                value={form.threshold}
+                onChange={(e) => handleChange("threshold", e.target.value)}
+                required
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">XP earned</span>
+              <Input
+                type="number"
+                value={form.xpEarned}
+                onChange={(e) => handleChange("xpEarned", e.target.value)}
+                required
+              />
+            </label>
+          </div>
           <label className="space-y-2">
             <span className="text-sm font-bold">Config (JSON)</span>
             <Input
@@ -386,26 +410,28 @@ function EditAchievementDialog({
   onClose: () => void;
   onUpdate: (id: string, data: Partial<Achievement>) => Promise<void>;
 }) {
-  const [form, setForm] = useState<Partial<Achievement>>({});
+  // Lazily seeded from the prop. The parent remounts this via `key`, so the
+  // initializer re-runs whenever a different achievement is opened.
+  const [form, setForm] = useState<Partial<Achievement>>(() =>
+    achievement
+      ? {
+          slug: achievement.slug,
+          title: achievement.title,
+          description: achievement.description,
+          imageUrl: achievement.imageUrl,
+          triggerType: achievement.triggerType,
+          isRepeatable: achievement.isRepeatable,
+          isShareable: achievement.isShareable,
+          isActive: achievement.isActive,
+          threshold: achievement.threshold,
+          xpEarned: achievement.xpEarned,
+          config: achievement.config,
+        }
+      : {},
+  );
   const [submitting, setSubmitting] = useState(false);
 
   if (!achievement) return null;
-
-  // Initialize on mount (via key remount already handled)
-  useState(() => {
-    setForm({
-      slug: achievement.slug,
-      title: achievement.title,
-      description: achievement.description,
-      imageUrl: achievement.imageUrl,
-      triggerType: achievement.triggerType,
-      isRepeatable: achievement.isRepeatable,
-      isShareable: achievement.isShareable,
-      isActive: achievement.isActive,
-      threshold: achievement.threshold,
-      config: achievement.config,
-    });
-  });
 
   const handleChange = (field: string, value: unknown) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -465,16 +491,28 @@ function EditAchievementDialog({
               onChange={(e) => handleChange("triggerType", e.target.value)}
             />
           </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Threshold</span>
-            <Input
-              type="number"
-              value={form.threshold || 0}
-              onChange={(e) =>
-                handleChange("threshold", Number(e.target.value))
-              }
-            />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-sm font-bold">Threshold</span>
+              <Input
+                type="number"
+                value={form.threshold ?? 0}
+                onChange={(e) =>
+                  handleChange("threshold", Number(e.target.value))
+                }
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-bold">XP earned</span>
+              <Input
+                type="number"
+                value={form.xpEarned ?? 0}
+                onChange={(e) =>
+                  handleChange("xpEarned", Number(e.target.value))
+                }
+              />
+            </label>
+          </div>
           <label className="space-y-2">
             <span className="text-sm font-bold">Config (JSON)</span>
             <Input

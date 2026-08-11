@@ -27,7 +27,10 @@ export default function AchievementsPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Achievements"
+      description="Define badges and the triggers that award them."
+    >
       <AchievementsTable
         achievements={achHook.achievements}
         loading={achHook.loading}
