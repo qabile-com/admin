@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fetchSignupXpRule, updateSignupXpRule } from "@/lib/api-services";
-import type { XpRule } from "@/types/api-types";
+import { useCallback, useEffect, useState } from "react";
+import { fetchXpRule, updateXpRule } from "@/lib/api-services";
+import type { XpRule, XpRuleKind } from "@/types/api-types";
 
-export function useXpRules() {
+/**
+ * One hook per rule kind — the signup and referral endpoints share a shape.
+ * `useXpRules("signup")` / `useXpRules("referral")`
+ */
+export function useXpRules(kind: XpRuleKind = "signup") {
   const [data, setData] = useState<XpRule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    fetchSignupXpRule()
+    fetchXpRule(kind)
       .then((rule) => {
         setData(rule);
         setError(null);
@@ -20,14 +24,14 @@ export function useXpRules() {
         setError(err instanceof Error ? err : new Error("Unknown error"));
       })
       .finally(() => setLoading(false));
-  };
+  }, [kind]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const updateRule = async (newData: { isActive: boolean; amount: number }) => {
-    const updated = await updateSignupXpRule(newData);
+    const updated = await updateXpRule(kind, newData);
     setData(updated);
     return updated;
   };

@@ -24,7 +24,10 @@ export default function XpRulesPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="XP Rules"
+      description="Tune the XP granted for signup and referrals."
+    >
       <XpRulesCard />
     </AdminShell>
   );
