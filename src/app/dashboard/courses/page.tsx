@@ -27,7 +27,10 @@ export default function CoursesPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Courses"
+      description="Publish courses, episodes, and moderate their comments."
+    >
       <CoursesTable
         courses={coursesHook.courses}
         loading={coursesHook.loading}

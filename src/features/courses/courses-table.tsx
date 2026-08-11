@@ -11,12 +11,14 @@ import {
   CheckCircle,
   XCircle,
   Search,
-  LinkIcon,
+  MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { SwitchField } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -32,11 +34,18 @@ import {
   moderateComment,
   deleteComment,
   deleteEpisode,
+  deleteEpisodesBatch,
   updateEpisode,
   reorderEpisodes,
   createEpisode,
 } from "@/lib/api-services";
-import type { AdminCourse, Episode, EpisodeComment } from "@/types/api-types";
+import { cn, formatDuration, getErrorMessage, userLabel } from "@/lib/utils";
+import type {
+  AdminCourse,
+  Episode,
+  EpisodeComment,
+  EpisodeMediaType,
+} from "@/types/api-types";
 
 // ─── Props ─────────────────────────────
 interface CoursesTableProps {
@@ -161,9 +170,7 @@ export function CoursesTable({
               ) : (
                 courses.map((course) => {
                   const isOpen = openCourseId === course.id;
-                  // Use durationSeconds if available, fallback to duration
-                  const durationSec =
-                    course.durationSeconds ?? course.duration ?? 0;
+                  const durationSec = course.durationSeconds ?? 0;
                   return (
                     <Fragment key={course.id}>
                       <TableRow
@@ -204,7 +211,14 @@ export function CoursesTable({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-bold">{course.title}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold">{course.title}</span>
+                            {course.noTrackRequired && (
+                              <Badge variant="muted" title="No progress tracking required">
+                                No-track
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {course.subtitle}
                           </div>
@@ -215,7 +229,7 @@ export function CoursesTable({
                         <TableCell>{course.level || "—"}</TableCell>
                         <TableCell>{course.xpPrice ?? course.xp}</TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {Math.floor(durationSec / 60)}m
+                          {formatDuration(durationSec)}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {course.views.toLocaleString()}
@@ -327,6 +341,8 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
   const [showAddEpisode, setShowAddEpisode] = useState(false);
   const [deleteEpisodeDialog, setDeleteEpisodeDialog] =
     useState<Episode | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBatchDelete, setShowBatchDelete] = useState(false);
   const cancelledRef = useRef(false);
 
   const loadEpisodes = useCallback(() => {
@@ -384,6 +400,21 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
   const handleDeleteEpisode = async (episodeId: string) => {
     await deleteEpisode(courseId, episodeId);
     setDeleteEpisodeDialog(null);
+    setSelectedIds((prev) => prev.filter((id) => id !== episodeId));
+    loadEpisodes();
+  };
+
+  const toggleSelected = (episodeId: string) =>
+    setSelectedIds((prev) =>
+      prev.includes(episodeId)
+        ? prev.filter((id) => id !== episodeId)
+        : [...prev, episodeId],
+    );
+
+  const handleBatchDelete = async () => {
+    await deleteEpisodesBatch(courseId, selectedIds);
+    setSelectedIds([]);
+    setShowBatchDelete(false);
     loadEpisodes();
   };
 
@@ -394,28 +425,59 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
           <p className="text-xs font-bold uppercase text-muted-foreground">
             Episodes
           </p>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setShowAddEpisode(true)}
-          >
-            <BookPlus className="mr-1 size-4" /> Add episode
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {selectedIds.length} selected
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setSelectedIds([])}
+                >
+                  Clear
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setShowBatchDelete(true)}
+                >
+                  <Trash2 className="size-4" />
+                  Delete selected
+                </Button>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowAddEpisode(true)}
+            >
+              <BookPlus className="mr-1 size-4" /> Add episode
+            </Button>
+          </div>
         </div>
         {loadingEpisodes ? (
-          <p className="py-4 text-sm text-muted-foreground">
-            Loading episodes...
-          </p>
+          <div className="mt-3 space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-16 animate-pulse rounded-lg bg-[var(--glass-2)]"
+              />
+            ))}
+          </div>
         ) : episodes.length === 0 ? (
           <p className="py-4 text-sm text-muted-foreground">No episodes yet.</p>
         ) : (
           <div className="mt-3 space-y-3">
-            {episodes
+            {[...episodes]
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((ep) => (
                 <EpisodeRow
                   key={ep.id}
                   episode={ep}
+                  selected={selectedIds.includes(ep.id)}
+                  onToggleSelected={() => toggleSelected(ep.id)}
                   onMove={moveEpisode}
                   onUpdate={async (data) => {
                     await updateEpisode(courseId, ep.id, data);
@@ -438,34 +500,68 @@ function CourseDetailPanel({ courseId }: { courseId: string }) {
         onClose={() => setDeleteEpisodeDialog(null)}
         onConfirm={handleDeleteEpisode}
       />
+      <BatchDeleteEpisodesDialog
+        open={showBatchDelete}
+        count={selectedIds.length}
+        onClose={() => setShowBatchDelete(false)}
+        onConfirm={handleBatchDelete}
+      />
     </div>
   );
 }
 
 function EpisodeRow({
   episode,
+  selected,
+  onToggleSelected,
   onMove,
   onUpdate,
   onDelete,
 }: {
   episode: Episode;
+  selected: boolean;
+  onToggleSelected: () => void;
   onMove: (ep: Episode, dir: "up" | "down") => void;
   onUpdate: (data: Partial<Episode>) => Promise<void>;
   onDelete: () => void;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const durationSec = episode.durationSeconds ?? episode.time ?? 0;
+  const durationSec = episode.durationSeconds ?? 0;
 
   return (
-    <div className="rounded-lg border bg-black/20 p-3">
+    <div
+      className={cn(
+        "rounded-lg border bg-black/20 p-3 transition-colors",
+        selected && "border-orange-300/40 bg-orange-400/[0.06]",
+      )}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="font-bold">{episode.title}</p>
+        <div className="flex gap-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelected}
+            aria-label={`Select ${episode.title}`}
+            className="mt-1 size-4 shrink-0 accent-[var(--color-primary)]"
+          />
+          <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-bold">{episode.title}</p>
+            {episode.mediaType === "audio" && (
+              <Badge variant="muted">Audio</Badge>
+            )}
+            {episode.noTrackRequired && (
+              <Badge variant="muted" title="No progress tracking required">
+                No-track
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {Math.floor(durationSec / 60)}m · {episode.xp} XP · Order:{" "}
+            {formatDuration(durationSec)} · {episode.xp} XP · Order:{" "}
             {episode.sortOrder}
           </p>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -488,7 +584,7 @@ function EpisodeRow({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Delete session"
+            aria-label="Delete episode"
             onClick={onDelete}
           >
             <Trash2 className="size-4 text-red-300" />
@@ -496,9 +592,10 @@ function EpisodeRow({
           <Button
             variant="ghost"
             size="icon"
+            aria-label={showComments ? "Hide comments" : "Show comments"}
             onClick={() => setShowComments(!showComments)}
           >
-            <LinkIcon className="size-4" />
+            <MessageSquare className="size-4" />
           </Button>
         </div>
       </div>
@@ -566,6 +663,67 @@ function DeleteEpisodeDialog({
   );
 }
 
+function BatchDeleteEpisodesDialog({
+  open,
+  count,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  count: number;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleDelete = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await onConfirm();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to delete the episodes"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <Dialog.Header onClose={onClose}>Delete episodes</Dialog.Header>
+      <Dialog.Body>
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+            {error}
+          </div>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Permanently delete{" "}
+          <strong className="text-foreground">
+            {count} episode{count === 1 ? "" : "s"}
+          </strong>
+          ? This cannot be undone.
+        </p>
+      </Dialog.Body>
+      <Dialog.Footer>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={loading}
+          >
+            {loading ? "Deleting..." : `Delete ${count}`}
+          </Button>
+        </div>
+      </Dialog.Footer>
+    </Dialog>
+  );
+}
+
 function CommentsSection({
   courseId,
   episodeId,
@@ -590,7 +748,7 @@ function CommentsSection({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unknown error");
+          setError(getErrorMessage(err, "Unknown error"));
         }
       })
       .finally(() => {
@@ -644,7 +802,11 @@ function CommentsSection({
         <div key={c.id} className="rounded border bg-black/10 p-2 text-sm">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span className="font-bold">
-              {c.authorDisplayName || c.authorName}
+              {userLabel({
+                displayName: c.authorDisplayName,
+                firstName: c.authorFirstName,
+                lastName: c.authorLastName,
+              })}
             </span>
             <Badge
               variant={
@@ -719,13 +881,16 @@ function CreateCourseDialog({
     xp: "0",
     level: "",
   });
+  const [noTrackRequired, setNoTrackRequired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setSubmitting(true);
     try {
       await onSubmit({
@@ -733,7 +898,10 @@ function CreateCourseDialog({
         subtitle: form.subtitle,
         description: form.description,
         category: form.category,
-        categories: form.categories.split(",").map((s) => s.trim()),
+        categories: form.categories
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         gradient: form.gradient,
         imageUrl: form.imageUrl,
         durationSeconds: Number(form.durationSeconds),
@@ -742,10 +910,13 @@ function CreateCourseDialog({
         xpPrice: Number(form.xpPrice),
         xp: Number(form.xp),
         level: form.level || undefined,
+        noTrackRequired,
       });
       onOpenChange(false);
     } catch (err: unknown) {
-      console.error(err);
+      setError(
+        getErrorMessage(err, "Failed to create the course"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -760,6 +931,11 @@ function CreateCourseDialog({
           onSubmit={handleSubmit}
           className="space-y-4"
         >
+          {error && (
+            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
           <label className="space-y-2">
             <span className="text-sm font-bold">Title</span>
             <Input
@@ -861,6 +1037,13 @@ function CreateCourseDialog({
               />
             </label>
           </div>
+
+          <SwitchField
+            label="No tracking required"
+            description="Learners can watch this course without progress tracking or completion gating."
+            checked={noTrackRequired}
+            onCheckedChange={setNoTrackRequired}
+          />
         </form>
       </Dialog.Body>
       <Dialog.Footer>
@@ -901,16 +1084,18 @@ function EditCourseDialog({
           categories: course.categories,
           gradient: course.gradient,
           imageUrl: course.imageUrl,
-          durationSeconds: course.durationSeconds ?? course.duration,
+          durationSeconds: course.durationSeconds,
           views: course.views,
           sortOrder: course.sortOrder,
           xpPrice: course.xpPrice,
           xp: course.xp,
           level: course.level,
+          noTrackRequired: course.noTrackRequired,
         }
       : {},
   );
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   if (!course) return null;
 
@@ -919,12 +1104,15 @@ function EditCourseDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setSubmitting(true);
     try {
       await onUpdate(course.id, form);
       onClose();
     } catch (err: unknown) {
-      console.error(err);
+      setError(
+        getErrorMessage(err, "Failed to save the course"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -939,6 +1127,11 @@ function EditCourseDialog({
           onSubmit={handleSubmit}
           className="space-y-4"
         >
+          {error && (
+            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
           <label className="space-y-2">
             <span className="text-sm font-bold">Title</span>
             <Input
@@ -1048,6 +1241,13 @@ function EditCourseDialog({
               />
             </label>
           </div>
+
+          <SwitchField
+            label="No tracking required"
+            description="Learners can watch this course without progress tracking or completion gating."
+            checked={Boolean(form.noTrackRequired)}
+            onCheckedChange={(value) => handleChange("noTrackRequired", value)}
+          />
         </form>
       </Dialog.Body>
       <Dialog.Footer>
@@ -1127,7 +1327,7 @@ function AddEpisodeDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
-  const [form, setForm] = useState({
+  const emptyForm = {
     title: "",
     subtitle: "",
     description: "",
@@ -1138,7 +1338,10 @@ function AddEpisodeDialog({
     xp: "0",
     sortOrder: "1",
     views: "0",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [mediaType, setMediaType] = useState<EpisodeMediaType>("video");
+  const [noTrackRequired, setNoTrackRequired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -1157,27 +1360,20 @@ function AddEpisodeDialog({
         category: form.category || undefined,
         imageUrl: form.imageUrl || undefined,
         videoUrl: form.videoUrl || undefined,
+        mediaType,
         durationSeconds: Number(form.durationSeconds),
         xp: Number(form.xp),
         sortOrder: Number(form.sortOrder),
         views: Number(form.views) || 0,
+        noTrackRequired,
       });
       onCreated();
-      setForm({
-        title: "",
-        subtitle: "",
-        description: "",
-        category: "",
-        imageUrl: "",
-        videoUrl: "",
-        durationSeconds: "0",
-        xp: "0",
-        sortOrder: "1",
-        views: "0",
-      });
+      setForm(emptyForm);
+      setMediaType("video");
+      setNoTrackRequired(false);
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to create episode";
+        getErrorMessage(err, "Failed to create episode");
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -1237,11 +1433,23 @@ function AddEpisodeDialog({
             />
           </label>
           <label className="space-y-2">
-            <span className="text-sm font-bold">Video URL</span>
+            <span className="text-sm font-bold">Media URL</span>
             <Input
               value={form.videoUrl}
               onChange={(e) => handleChange("videoUrl", e.target.value)}
             />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Media type</span>
+            <Select
+              value={mediaType}
+              onChange={(e) =>
+                setMediaType(e.target.value as EpisodeMediaType)
+              }
+            >
+              <option value="video">Video</option>
+              <option value="audio">Audio</option>
+            </Select>
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="space-y-2">
@@ -1282,6 +1490,13 @@ function AddEpisodeDialog({
               </p>
             </label>
           </div>
+
+          <SwitchField
+            label="No tracking required"
+            description="Learners can play this episode without progress tracking or completion gating."
+            checked={noTrackRequired}
+            onCheckedChange={setNoTrackRequired}
+          />
         </form>
       </Dialog.Body>
       <Dialog.Footer>
@@ -1313,35 +1528,34 @@ function EditEpisodeDialog({
   onOpenChange: (open: boolean) => void;
   onUpdate: (data: Partial<Episode>) => Promise<void>;
 }) {
-  const [form, setForm] = useState({
-    title: episode.title,
-    subtitle: episode.subtitle || "",
-    description: episode.description || "",
-    category: episode.category || "",
-    imageUrl: episode.imageUrl || episode.coverUrl || "",
-    videoUrl: episode.videoUrl || "",
-    durationSeconds: String(episode.durationSeconds ?? episode.time ?? 0),
-    xp: String(episode.xp || 0),
-    sortOrder: String(episode.sortOrder || 0),
-    views: String(episode.views || 0),
+  const toFormState = (source: Episode) => ({
+    title: source.title,
+    subtitle: source.subtitle || "",
+    description: source.description || "",
+    category: source.category || "",
+    imageUrl: source.imageUrl || source.coverUrl || "",
+    videoUrl: source.videoUrl || "",
+    durationSeconds: String(source.durationSeconds ?? 0),
+    xp: String(source.xp || 0),
+    sortOrder: String(source.sortOrder || 0),
+    views: String(source.views || 0),
   });
+
+  const [form, setForm] = useState(() => toFormState(episode));
+  const [mediaType, setMediaType] = useState<EpisodeMediaType>(
+    episode.mediaType ?? "video",
+  );
+  const [noTrackRequired, setNoTrackRequired] = useState(
+    Boolean(episode.noTrackRequired),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   // Sync form when episode prop changes (dialog opened for different episode)
   useEffect(() => {
-    setForm({
-      title: episode.title,
-      subtitle: episode.subtitle || "",
-      description: episode.description || "",
-      category: episode.category || "",
-      imageUrl: episode.imageUrl || episode.coverUrl || "",
-      videoUrl: episode.videoUrl || "",
-      durationSeconds: String(episode.durationSeconds ?? episode.time ?? 0),
-      xp: String(episode.xp || 0),
-      sortOrder: String(episode.sortOrder || 0),
-      views: String(episode.views || 0),
-    });
+    setForm(toFormState(episode));
+    setMediaType(episode.mediaType ?? "video");
+    setNoTrackRequired(Boolean(episode.noTrackRequired));
     setError("");
   }, [episode]);
 
@@ -1360,14 +1574,16 @@ function EditEpisodeDialog({
         category: form.category || undefined,
         imageUrl: form.imageUrl || undefined,
         videoUrl: form.videoUrl || undefined,
+        mediaType,
         durationSeconds: Number(form.durationSeconds),
         xp: Number(form.xp),
         sortOrder: Number(form.sortOrder),
         views: Number(form.views) || 0,
+        noTrackRequired,
       });
       onOpenChange(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update episode");
+      setError(getErrorMessage(err, "Failed to update episode"));
     } finally {
       setSubmitting(false);
     }
@@ -1426,11 +1642,23 @@ function EditEpisodeDialog({
             />
           </label>
           <label className="space-y-2">
-            <span className="text-sm font-bold">Video URL</span>
+            <span className="text-sm font-bold">Media URL</span>
             <Input
               value={form.videoUrl}
               onChange={(e) => handleChange("videoUrl", e.target.value)}
             />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Media type</span>
+            <Select
+              value={mediaType}
+              onChange={(e) =>
+                setMediaType(e.target.value as EpisodeMediaType)
+              }
+            >
+              <option value="video">Video</option>
+              <option value="audio">Audio</option>
+            </Select>
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="space-y-2">
@@ -1471,6 +1699,13 @@ function EditEpisodeDialog({
               </p>
             </label>
           </div>
+
+          <SwitchField
+            label="No tracking required"
+            description="Learners can play this episode without progress tracking or completion gating."
+            checked={noTrackRequired}
+            onCheckedChange={setNoTrackRequired}
+          />
         </form>
       </Dialog.Body>
       <Dialog.Footer>
