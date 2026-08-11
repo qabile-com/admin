@@ -5,16 +5,20 @@ import {
   fetchRoadmapSteps,
   createRoadmapStep,
   updateRoadmapStep,
+  deleteRoadmapStep,
+  type ListParams,
+  type RoadmapStepInput,
 } from "@/lib/api-services";
 import type { RoadmapStep, PaginatedResponse } from "@/types/api-types";
 
-interface UseRoadmapOptions {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}
-
-export function useRoadmapSteps(initialParams: UseRoadmapOptions = {}) {
+/**
+ * Steps are nested under a roadmap: /api/v1/admin/roadmaps/{roadmapId}/steps
+ * Pass `roadmapId: null` to stay idle (e.g. before a roadmap is selected).
+ */
+export function useRoadmapSteps(
+  roadmapId: string | null,
+  initialParams: ListParams = {},
+) {
   const [data, setData] = useState<RoadmapStep[]>([]);
   const [meta, setMeta] = useState({
     totalItems: 0,
@@ -22,29 +26,36 @@ export function useRoadmapSteps(initialParams: UseRoadmapOptions = {}) {
     limit: 10,
     offset: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [params, setParams] = useState<UseRoadmapOptions>(initialParams);
+  const [params, setParams] = useState<ListParams>(initialParams);
   const cancelledRef = useRef(false);
 
   const load = useCallback(() => {
+    if (!roadmapId) {
+      setData([]);
+      setMeta({ totalItems: 0, totalPages: 0, limit: 10, offset: 0 });
+      setLoading(false);
+      return;
+    }
+
     cancelledRef.current = false;
-    fetchRoadmapSteps(params)
+    setLoading(true);
+    fetchRoadmapSteps(roadmapId, params)
       .then((res: PaginatedResponse<RoadmapStep>) => {
-        if (!cancelledRef.current) {
-          setData(res.data);
-          setMeta(res.meta);
-          setError(null);
-        }
+        if (cancelledRef.current) return;
+        setData(res.data);
+        setMeta(res.meta);
+        setError(null);
       })
       .catch((err) => {
-        if (!cancelledRef.current)
-          setError(err instanceof Error ? err : new Error("Unknown error"));
+        if (cancelledRef.current) return;
+        setError(err instanceof Error ? err : new Error("Unknown error"));
       })
       .finally(() => {
         if (!cancelledRef.current) setLoading(false);
       });
-  }, [params]);
+  }, [roadmapId, params]);
 
   useEffect(() => {
     load();
@@ -55,19 +66,25 @@ export function useRoadmapSteps(initialParams: UseRoadmapOptions = {}) {
 
   const setSearchQuery = (q: string) =>
     setParams((prev) => ({ ...prev, q, offset: 0 }));
+
   const setPage = (page: number) =>
     setParams((prev) => ({ ...prev, offset: (page - 1) * (prev.limit || 10) }));
 
-  const addStep = async (data: Parameters<typeof createRoadmapStep>[0]) => {
-    await createRoadmapStep(data);
+  const addStep = async (input: RoadmapStepInput) => {
+    if (!roadmapId) return;
+    await createRoadmapStep(roadmapId, input);
     load();
   };
 
-  const editStep = async (
-    id: string,
-    data: Parameters<typeof updateRoadmapStep>[1],
-  ) => {
-    await updateRoadmapStep(id, data);
+  const editStep = async (stepId: string, input: RoadmapStepInput) => {
+    if (!roadmapId) return;
+    await updateRoadmapStep(roadmapId, stepId, input);
+    load();
+  };
+
+  const removeStep = async (stepId: string) => {
+    if (!roadmapId) return;
+    await deleteRoadmapStep(roadmapId, stepId);
     load();
   };
 
@@ -80,6 +97,7 @@ export function useRoadmapSteps(initialParams: UseRoadmapOptions = {}) {
     setPage,
     addStep,
     editStep,
+    removeStep,
     refetch: load,
   };
 }

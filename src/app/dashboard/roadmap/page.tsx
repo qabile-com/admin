@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { useAuth } from "@/hooks/use-auth";
-import { useRoadmapSteps } from "@/hooks/use-roadmap-steps";
-import { RoadmapTable } from "@/features/roadmap/roadmap-table";
+import { useRoadmaps } from "@/hooks/use-roadmaps";
+import { RoadmapsTable } from "@/features/roadmap/roadmaps-table";
 
 export default function RoadmapPage() {
   const { accessToken } = useAuth();
@@ -22,21 +22,25 @@ export default function RoadmapPage() {
     }
   }, [mounted, accessToken, router]);
 
-  const roadmapHook = useRoadmapSteps({ limit: 10, offset: 0 });
+  const roadmapsHook = useRoadmaps({ limit: 10, offset: 0 });
 
   if (!mounted) return null;
 
   return (
-    <AdminShell>
-      <RoadmapTable
-        steps={roadmapHook.steps}
-        loading={roadmapHook.loading}
-        error={roadmapHook.error}
-        meta={roadmapHook.meta}
-        onSearch={roadmapHook.setSearchQuery}
-        onPageChange={roadmapHook.setPage}
-        onCreate={roadmapHook.addStep}
-        onUpdate={roadmapHook.editStep}
+    <AdminShell
+      title="Roadmaps"
+      description="Build learning paths and manage the steps inside them."
+    >
+      <RoadmapsTable
+        roadmaps={roadmapsHook.roadmaps}
+        loading={roadmapsHook.loading}
+        error={roadmapsHook.error}
+        meta={roadmapsHook.meta}
+        onSearch={roadmapsHook.setSearchQuery}
+        onPageChange={roadmapsHook.setPage}
+        onCreate={roadmapsHook.addRoadmap}
+        onUpdate={roadmapsHook.editRoadmap}
+        onDelete={roadmapsHook.removeRoadmap}
       />
     </AdminShell>
   );
