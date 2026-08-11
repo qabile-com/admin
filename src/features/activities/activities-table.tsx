@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime, humanize, shortId } from "@/lib/utils";
 import type { Activity } from "@/types/api-types";
 
 interface ActivitiesTableProps {
@@ -103,13 +104,23 @@ export function ActivitiesTable({
               ) : (
                 activities.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-bold">{a.actionType}</TableCell>
+                    <TableCell className="font-bold" title={a.actionType}>
+                      {humanize(a.actionType)}
+                    </TableCell>
                     <TableCell>
-                      {a.targetType} ({a.targetId})
+                      <div>{humanize(a.targetType)}</div>
+                      {a.targetId && (
+                        <div
+                          className="font-mono text-xs text-muted-foreground"
+                          title={a.targetId}
+                        >
+                          {shortId(a.targetId)}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>{a.summary}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(a.createdAt).toLocaleString()}
+                      {formatDateTime(a.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))

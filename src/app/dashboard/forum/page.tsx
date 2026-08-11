@@ -27,7 +27,10 @@ export default function ForumPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Forum"
+      description="Moderate posts, comments, likes, and blocks."
+    >
       <ForumTable
         posts={postsHook.posts}
         postsLoading={postsHook.loading}

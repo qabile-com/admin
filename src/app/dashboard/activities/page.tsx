@@ -27,7 +27,10 @@ export default function ActivitiesPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Activities"
+      description="Recent admin and system activity."
+    >
       <ActivitiesTable
         activities={activitiesHook.activities}
         loading={activitiesHook.loading}

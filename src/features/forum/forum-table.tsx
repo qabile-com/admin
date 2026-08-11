@@ -18,6 +18,7 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog } from "@/components/ui/dialog";
 import { useForumLikes } from "@/hooks/use-forum-likes";
 import { useForumBlocks } from "@/hooks/use-forum-blocks";
+import { formatDateTime, shortId, userLabel } from "@/lib/utils";
 import type { ForumPost } from "@/types/api-types";
 
 interface ForumTableProps {
@@ -166,11 +167,16 @@ export function ForumTable({
                                 {post.text}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {post.location} ·{" "}
-                                {new Date(post.createdAt).toLocaleDateString()}
+                                {post.location ? `${post.location} · ` : ""}
+                                {formatDateTime(post.createdAt)}
                               </div>
                             </TableCell>
-                            <TableCell>{post.authorId}</TableCell>
+                            <TableCell
+                              className="font-mono text-xs"
+                              title={post.authorId}
+                            >
+                              {shortId(post.authorId)}
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Heart className="size-3 text-red-400" />
@@ -268,10 +274,14 @@ export function ForumTable({
                                               {comment.text}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                              by {comment.authorId} ·{" "}
-                                              {new Date(
-                                                comment.createdAt,
-                                              ).toLocaleDateString()}
+                                              by{" "}
+                                              <span
+                                                className="font-mono"
+                                                title={comment.authorId}
+                                              >
+                                                {shortId(comment.authorId)}
+                                              </span>{" "}
+                                              · {formatDateTime(comment.createdAt)}
                                             </p>
                                           </div>
                                           <Button
@@ -365,10 +375,10 @@ export function ForumTable({
                   ) : (
                     blocksHook.blocks.map((block) => (
                       <TableRow key={block.id}>
-                        <TableCell>{block.blocker.displayName}</TableCell>
-                        <TableCell>{block.blockedUser.displayName}</TableCell>
+                        <TableCell>{userLabel(block.blocker)}</TableCell>
+                        <TableCell>{userLabel(block.blockedUser)}</TableCell>
                         <TableCell>
-                          {new Date(block.blockedAt).toLocaleDateString()}
+                          {formatDateTime(block.blockedAt)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -523,9 +533,9 @@ function LikesDialog({
                 key={like.id}
                 className="flex items-center justify-between rounded border bg-black/10 p-2"
               >
-                <span className="font-bold">{like.user.displayName}</span>
+                <span className="font-bold">{userLabel(like.user)}</span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(like.likedAt).toLocaleDateString()}
+                  {formatDateTime(like.likedAt)}
                 </span>
               </div>
             ))}
