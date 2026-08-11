@@ -4,36 +4,51 @@ import type {
   AdminCourse,
   Episode,
   EpisodeComment,
+  EpisodeMediaType,
+  EpisodeStep,
   AdminOverview,
   PaginatedResponse,
   Achievement,
+  Roadmap,
   RoadmapStep,
+  RoadmapStepItem,
+  RoadmapStepType,
   ForumPost,
   ForumLike,
   ForumBlock,
+  ModerationStatus,
   XpRule,
+  XpRuleKind,
   ForumPostCooldownRule,
+  BdUser,
+  InvitedUser,
   Activity,
+  NotificationDispatchResponse,
 } from "@/types/api-types";
+
+/** Every list endpoint takes the same three query params. */
+export interface ListParams {
+  limit?: number;
+  offset?: number;
+  q?: string;
+}
+
+type Success = { success: boolean };
 
 // ─── Overview ────────────────────────────────────
 export const fetchOverview = () =>
   apiClient.get<AdminOverview>("/api/v1/admin/overview").then((r) => r.data);
 
 // ─── Users ───────────────────────────────────────
-export const fetchUsers = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+export const fetchUsers = (params?: ListParams) =>
   apiClient
     .get<PaginatedResponse<AdminUser>>("/api/v1/admin/users", { params })
     .then((r) => r.data);
 
 export const createUser = (data: {
-  display_name: string;
-  username: string;
-  phone: string;
+  display_name?: string;
+  username?: string;
+  phone?: string;
   email?: string;
 }) =>
   apiClient.post<AdminUser>("/api/v1/admin/users", data).then((r) => r.data);
@@ -46,21 +61,27 @@ export const banUser = (
     .patch<AdminUser>(`/api/v1/admin/users/${userId}/ban`, payload)
     .then((r) => r.data);
 
+/** PATCH /api/v1/admin/users/{id}/verify */
+export const verifyUser = (userId: string, isVerified: boolean) =>
+  apiClient
+    .patch<AdminUser>(`/api/v1/admin/users/${userId}/verify`, { isVerified })
+    .then((r) => r.data);
+
 export const deleteUser = (userId: string) =>
   apiClient
-    .delete<{ success: boolean }>(`/api/v1/admin/users/${userId}`)
+    .delete<Success>(`/api/v1/admin/users/${userId}`)
     .then((r) => r.data);
 
 export const awardAchievement = (userId: string, achievementId: string) =>
   apiClient
-    .post<{
-      success: boolean;
-    }>(`/api/v1/admin/users/${userId}/achievements/${achievementId}/award`)
+    .post<Success>(
+      `/api/v1/admin/users/${userId}/achievements/${achievementId}/award`,
+    )
     .then((r) => r.data);
 
 export const modifyUserXp = (
   userId: string,
-  data: { amount: number; reason: string },
+  data: { amount: number; reason?: string },
 ) =>
   apiClient
     .post<AdminUser>(`/api/v1/admin/users/${userId}/xp`, data)
@@ -69,8 +90,8 @@ export const modifyUserXp = (
 // ─── Admins ──────────────────────────────────────
 export const createAdmin = (data: {
   name: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
 }) =>
   apiClient.post<AdminUser>("/api/v1/admin/admins", data).then((r) => r.data);
 
@@ -80,28 +101,42 @@ export const removeAdmin = (userId: string) =>
     .then((r) => r.data);
 
 // ─── Courses ─────────────────────────────────────
-export const fetchCourses = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+export interface CourseInput {
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  category: string;
+  categories?: string[];
+  gradient?: string;
+  imageUrl?: string | null;
+  coverUrl?: string | null;
+  durationSeconds: number;
+  views: number;
+  sortOrder?: number;
+  xpPrice: number;
+  xp?: number;
+  level?: string | null;
+  noTrackRequired?: boolean;
+}
+
+export const fetchCourses = (params?: ListParams) =>
   apiClient
     .get<PaginatedResponse<AdminCourse>>("/api/v1/admin/courses", { params })
     .then((r) => r.data);
 
-export const createCourse = (data: Partial<AdminCourse>) =>
+export const createCourse = (data: CourseInput) =>
   apiClient
     .post<AdminCourse>("/api/v1/admin/courses", data)
     .then((r) => r.data);
 
-export const updateCourse = (courseId: string, data: Partial<AdminCourse>) =>
+export const updateCourse = (courseId: string, data: Partial<CourseInput>) =>
   apiClient
     .patch<AdminCourse>(`/api/v1/admin/courses/${courseId}`, data)
     .then((r) => r.data);
 
 export const deleteCourse = (courseId: string) =>
   apiClient
-    .delete<{ success: boolean }>(`/api/v1/admin/courses/${courseId}`)
+    .delete<Success>(`/api/v1/admin/courses/${courseId}`)
     .then((r) => r.data);
 
 export const reorderCourses = (items: { id: string; sortOrder: number }[]) =>
@@ -112,53 +147,63 @@ export const reorderCourses = (items: { id: string; sortOrder: number }[]) =>
     .then((r) => r.data);
 
 // ─── Episodes ────────────────────────────────────
-export const fetchEpisodes = (
-  courseId: string,
-  params?: { limit?: number; offset?: number; q?: string },
-) =>
+export interface EpisodeInput {
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  category?: string | null;
+  imageUrl?: string | null;
+  coverUrl?: string | null;
+  videoUrl?: string | null;
+  mediaType?: EpisodeMediaType;
+  durationSeconds: number;
+  xp: number;
+  level?: string | null;
+  sortOrder?: number;
+  views?: number;
+  steps?: Pick<EpisodeStep, "id" | "text" | "isCompleted">[];
+  noTrackRequired?: boolean;
+}
+
+export const fetchEpisodes = (courseId: string, params?: ListParams) =>
   apiClient
     .get<
       PaginatedResponse<Episode>
     >(`/api/v1/admin/courses/${courseId}/episodes`, { params })
     .then((r) => r.data);
 
-export const createEpisode = (
-  courseId: string,
-  data: {
-    title: string;
-    subtitle?: string;
-    description?: string;
-    category?: string;
-    imageUrl?: string;
-    videoUrl?: string;
-    durationSeconds?: number;
-    time?: number;
-    xp?: number;
-    sortOrder?: number;
-    views?: number;
-    steps?: { id?: string; text: string; isCompleted?: boolean }[];
-  },
-) =>
+export const createEpisode = (courseId: string, data: EpisodeInput) =>
   apiClient
     .post<Episode>(`/api/v1/admin/courses/${courseId}/episodes`, data)
-    .then((r) => r.data);
-
-export const deleteEpisode = (courseId: string, episodeId: string) =>
-  apiClient
-    .delete<{
-      success: boolean;
-    }>(`/api/v1/admin/courses/${courseId}/episodes/${episodeId}`)
     .then((r) => r.data);
 
 export const updateEpisode = (
   courseId: string,
   episodeId: string,
-  data: Partial<Episode>,
+  data: Partial<EpisodeInput>,
 ) =>
   apiClient
     .patch<Episode>(
       `/api/v1/admin/courses/${courseId}/episodes/${episodeId}`,
       data,
+    )
+    .then((r) => r.data);
+
+export const deleteEpisode = (courseId: string, episodeId: string) =>
+  apiClient
+    .delete<Success>(`/api/v1/admin/courses/${courseId}/episodes/${episodeId}`)
+    .then((r) => r.data);
+
+/**
+ * DELETE /api/v1/admin/courses/{courseId}/episodes/batch/{ids}
+ * `ids` is a comma-separated list embedded in the path.
+ */
+export const deleteEpisodesBatch = (courseId: string, episodeIds: string[]) =>
+  apiClient
+    .delete<Success>(
+      `/api/v1/admin/courses/${courseId}/episodes/batch/${episodeIds
+        .map(encodeURIComponent)
+        .join(",")}`,
     )
     .then((r) => r.data);
 
@@ -172,11 +217,11 @@ export const reorderEpisodes = (
     >(`/api/v1/admin/courses/${courseId}/episodes/reorder`, { items })
     .then((r) => r.data);
 
-// ─── Comments ────────────────────────────────────
+// ─── Episode comments ────────────────────────────
 export const fetchEpisodeComments = (
   courseId: string,
   episodeId: string,
-  params?: { limit?: number; offset?: number; q?: string },
+  params?: ListParams,
 ) =>
   apiClient
     .get<
@@ -188,7 +233,7 @@ export const moderateComment = (
   courseId: string,
   episodeId: string,
   commentId: string,
-  data: { moderationStatus: string; reason?: string },
+  data: { moderationStatus: ModerationStatus; reason?: string },
 ) =>
   apiClient
     .patch<EpisodeComment>(
@@ -203,76 +248,129 @@ export const deleteComment = (
   commentId: string,
 ) =>
   apiClient
-    .delete<{
-      success: boolean;
-    }>(
+    .delete<Success>(
       `/api/v1/admin/courses/${courseId}/episodes/${episodeId}/comments/${commentId}`,
     )
     .then((r) => r.data);
 
 // ─── Achievements ────────────────────────────────
-export const fetchAchievements = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+export interface AchievementInput {
+  slug: string;
+  title: string;
+  description: string;
+  imageUrl?: string | null;
+  triggerType: string;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
+  isRepeatable: boolean;
+  isShareable: boolean;
+  isActive: boolean;
+  threshold: number;
+  xpEarned: number;
+  config?: Record<string, unknown> | null;
+}
+
+export const fetchAchievements = (params?: ListParams) =>
   apiClient
     .get<
       PaginatedResponse<Achievement>
     >("/api/v1/admin/achievements", { params })
     .then((r) => r.data);
 
-export const createAchievement = (data: Partial<Achievement>) =>
+export const createAchievement = (data: AchievementInput) =>
   apiClient
     .post<Achievement>("/api/v1/admin/achievements", data)
     .then((r) => r.data);
 
-export const updateAchievement = (id: string, data: Partial<Achievement>) =>
+export const updateAchievement = (id: string, data: AchievementInput) =>
   apiClient
     .patch<Achievement>(`/api/v1/admin/achievements/${id}`, data)
     .then((r) => r.data);
 
 export const deleteAchievement = (id: string) =>
   apiClient
-    .delete<{ success: boolean }>(`/api/v1/admin/achievements/${id}`)
+    .delete<Success>(`/api/v1/admin/achievements/${id}`)
     .then((r) => r.data);
 
-// ─── Roadmap Steps ───────────────────────────────
-export const fetchRoadmapSteps = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+// ─── Roadmaps ────────────────────────────────────
+export interface RoadmapInput {
+  slug?: string | null;
+  title: string;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder?: number;
+}
+
+export const fetchRoadmaps = (params?: ListParams) =>
+  apiClient
+    .get<PaginatedResponse<Roadmap>>("/api/v1/admin/roadmaps", { params })
+    .then((r) => r.data);
+
+export const createRoadmap = (data: RoadmapInput) =>
+  apiClient.post<Roadmap>("/api/v1/admin/roadmaps", data).then((r) => r.data);
+
+export const updateRoadmap = (id: string, data: Partial<RoadmapInput>) =>
+  apiClient
+    .patch<Roadmap>(`/api/v1/admin/roadmaps/${id}`, data)
+    .then((r) => r.data);
+
+export const deleteRoadmap = (id: string) =>
+  apiClient
+    .delete<Success>(`/api/v1/admin/roadmaps/${id}`)
+    .then((r) => r.data);
+
+// ─── Roadmap steps (nested under a roadmap) ──────
+export interface RoadmapStepInput {
+  roadmapId: string;
+  num: number;
+  title: string;
+  category: string;
+  type: RoadmapStepType;
+  introText: string;
+  contentText?: string | null;
+  steps?: RoadmapStepItem[];
+  xpReward: number;
+}
+
+export const fetchRoadmapSteps = (roadmapId: string, params?: ListParams) =>
   apiClient
     .get<
       PaginatedResponse<RoadmapStep>
-    >("/api/v1/admin/roadmap/steps", { params })
+    >(`/api/v1/admin/roadmaps/${roadmapId}/steps`, { params })
     .then((r) => r.data);
 
-export const createRoadmapStep = (data: Partial<RoadmapStep>) =>
+export const createRoadmapStep = (
+  roadmapId: string,
+  data: RoadmapStepInput,
+) =>
   apiClient
-    .post<RoadmapStep>("/api/v1/admin/roadmap/steps", data)
+    .post<RoadmapStep>(`/api/v1/admin/roadmaps/${roadmapId}/steps`, data)
     .then((r) => r.data);
 
-export const updateRoadmapStep = (id: string, data: Partial<RoadmapStep>) =>
+export const updateRoadmapStep = (
+  roadmapId: string,
+  stepId: string,
+  data: RoadmapStepInput,
+) =>
   apiClient
-    .patch<RoadmapStep>(`/api/v1/admin/roadmap/steps/${id}`, data)
+    .patch<RoadmapStep>(
+      `/api/v1/admin/roadmaps/${roadmapId}/steps/${stepId}`,
+      data,
+    )
     .then((r) => r.data);
 
-// ─── Forum Posts ─────────────────────────────────
-export const fetchForumPosts = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+export const deleteRoadmapStep = (roadmapId: string, stepId: string) =>
+  apiClient
+    .delete<Success>(`/api/v1/admin/roadmaps/${roadmapId}/steps/${stepId}`)
+    .then((r) => r.data);
+
+// ─── Forum ───────────────────────────────────────
+export const fetchForumPosts = (params?: ListParams) =>
   apiClient
     .get<PaginatedResponse<ForumPost>>("/api/v1/admin/forum/posts", { params })
     .then((r) => r.data);
 
-export const fetchForumPostLikes = (
-  postId: string,
-  params?: { limit?: number; offset?: number; q?: string },
-) =>
+export const fetchForumPostLikes = (postId: string, params?: ListParams) =>
   apiClient
     .get<
       PaginatedResponse<ForumLike>
@@ -286,19 +384,15 @@ export const pinForumPost = (postId: string, isPinned: boolean) =>
 
 export const deleteForumPost = (postId: string) =>
   apiClient
-    .delete<{ success: boolean }>(`/api/v1/admin/forum/posts/${postId}`)
+    .delete<Success>(`/api/v1/admin/forum/posts/${postId}`)
     .then((r) => r.data);
 
 export const deleteForumComment = (commentId: string) =>
   apiClient
-    .delete<{ success: boolean }>(`/api/v1/admin/forum/comments/${commentId}`)
+    .delete<Success>(`/api/v1/admin/forum/comments/${commentId}`)
     .then((r) => r.data);
 
-export const fetchForumBlocks = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+export const fetchForumBlocks = (params?: ListParams) =>
   apiClient
     .get<
       PaginatedResponse<ForumBlock>
@@ -306,27 +400,36 @@ export const fetchForumBlocks = (params?: {
     .then((r) => r.data);
 
 // ─── Activities ──────────────────────────────────
-export const fetchActivities = (params?: {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}) =>
+export const fetchActivities = (params?: ListParams) =>
   apiClient
     .get<PaginatedResponse<Activity>>("/api/v1/admin/activities", { params })
     .then((r) => r.data);
 
-// ─── XP Rules ────────────────────────────────────
-export const fetchSignupXpRule = () =>
-  apiClient.get<XpRule>("/api/v1/admin/xp-rules/signup").then((r) => r.data);
+// ─── XP rules (signup + referral share one shape) ─
+export const fetchXpRule = (kind: XpRuleKind) =>
+  apiClient.get<XpRule>(`/api/v1/admin/xp-rules/${kind}`).then((r) => r.data);
 
+export const updateXpRule = (
+  kind: XpRuleKind,
+  data: { isActive: boolean; amount: number },
+) =>
+  apiClient
+    .patch<XpRule>(`/api/v1/admin/xp-rules/${kind}`, data)
+    .then((r) => r.data);
+
+export const fetchSignupXpRule = () => fetchXpRule("signup");
 export const updateSignupXpRule = (data: {
   isActive: boolean;
   amount: number;
-}) =>
-  apiClient
-    .patch<XpRule>("/api/v1/admin/xp-rules/signup", data)
-    .then((r) => r.data);
+}) => updateXpRule("signup", data);
 
+export const fetchReferralXpRule = () => fetchXpRule("referral");
+export const updateReferralXpRule = (data: {
+  isActive: boolean;
+  amount: number;
+}) => updateXpRule("referral", data);
+
+// ─── Forum post cooldown (API unit is SECONDS) ────
 export const fetchForumPostCooldownRule = () =>
   apiClient
     .get<ForumPostCooldownRule>("/api/v1/admin/forum/post-cooldown")
@@ -334,8 +437,53 @@ export const fetchForumPostCooldownRule = () =>
 
 export const updateForumPostCooldownRule = (data: {
   isActive: boolean;
-  hours: number;
+  seconds: number;
 }) =>
   apiClient
     .patch<ForumPostCooldownRule>("/api/v1/admin/forum/post-cooldown", data)
+    .then((r) => r.data);
+
+// ─── BD users ────────────────────────────────────
+export const fetchBdUsers = (params?: ListParams) =>
+  apiClient
+    .get<PaginatedResponse<BdUser>>("/api/v1/admin/bd-users", { params })
+    .then((r) => r.data);
+
+export const assignBdUser = (userId: string) =>
+  apiClient
+    .post<BdUser>(`/api/v1/admin/bd-users/${userId}`)
+    .then((r) => r.data);
+
+export const removeBdUser = (userId: string) =>
+  apiClient
+    .delete<Success>(`/api/v1/admin/bd-users/${userId}`)
+    .then((r) => r.data);
+
+export const fetchInvitedUsers = (userId: string, params?: ListParams) =>
+  apiClient
+    .get<PaginatedResponse<InvitedUser>>(
+      `/api/v1/admin/users/${userId}/invited-users`,
+      { params },
+    )
+    .then((r) => r.data);
+
+// ─── Push notifications ──────────────────────────
+export interface SendNotificationInput {
+  title: string;
+  body: string;
+  /** Target specific users. Omit when `sendToAll` is true. */
+  userIds?: string[];
+  sendToAll?: boolean;
+  /** Custom string data payload delivered with the push. */
+  data?: Record<string, string>;
+  imageUrl?: string | null;
+  link?: string | null;
+}
+
+export const sendNotification = (payload: SendNotificationInput) =>
+  apiClient
+    .post<NotificationDispatchResponse>(
+      "/api/v1/admin/notifications/send",
+      payload,
+    )
     .then((r) => r.data);
