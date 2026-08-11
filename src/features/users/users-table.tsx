@@ -7,8 +7,7 @@ import {
   UserPlus,
   Ban,
   Trash2,
-  CheckCircle,
-  XCircle,
+  BadgeCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Dialog } from "@/components/ui/dialog"; // You'll need a Dialog component
+import { Dialog } from "@/components/ui/dialog";
+import { getErrorMessage, humanize, userLabel } from "@/lib/utils";
 import type { AdminUser } from "@/types/api-types";
 
 interface UsersTableProps {
@@ -38,11 +38,12 @@ interface UsersTableProps {
   onSearch: (q: string) => void;
   onPageChange: (page: number) => void;
   onBan: (userId: string, isBanned: boolean, reason?: string) => Promise<void>;
+  onVerify: (userId: string, isVerified: boolean) => Promise<void>;
   onDelete: (userId: string) => Promise<void>;
   onCreate: (data: {
-    display_name: string;
-    username: string;
-    phone: string;
+    display_name?: string;
+    username?: string;
+    phone?: string;
     email?: string;
   }) => Promise<void>;
 }
@@ -55,6 +56,7 @@ export function UsersTable({
   onSearch,
   onPageChange,
   onBan,
+  onVerify,
   onDelete,
   onCreate,
 }: UsersTableProps) {
@@ -62,6 +64,7 @@ export function UsersTable({
   const [openUserId, setOpenUserId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [banDialog, setBanDialog] = useState<{ user: AdminUser } | null>(null);
+  const [verifyDialog, setVerifyDialog] = useState<AdminUser | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<AdminUser | null>(null);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -147,12 +150,12 @@ export function UsersTable({
                         onClick={() => setOpenUserId(isOpen ? null : user.id)}
                       >
                         <TableCell>
-                          <div className="font-bold">{user.name}</div>
+                          <div className="font-bold">{userLabel(user)}</div>
                           <div className="text-xs text-muted-foreground">
-                            {user.email || user.id}
+                            {user.email || user.username || user.id}
                           </div>
                         </TableCell>
-                        <TableCell>{user.role}</TableCell>
+                        <TableCell>{humanize(user.role)}</TableCell>
                         <TableCell>
                           <Badge variant={isActive ? "success" : "danger"}>
                             {isActive ? "Active" : "Banned"}
@@ -163,6 +166,18 @@ export function UsersTable({
                         <TableCell>{user.streak}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Verify ${userLabel(user)}`}
+                              title="Verify user"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setVerifyDialog(user);
+                              }}
+                            >
+                              <BadgeCheck className="size-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -191,7 +206,7 @@ export function UsersTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            aria-label={`Expand details for ${user.name}`}
+                            aria-label={`Expand details for ${userLabel(user)}`}
                             className={isOpen ? "rotate-180" : ""}
                           >
                             <ChevronDown />
@@ -293,6 +308,13 @@ export function UsersTable({
         onConfirm={onBan}
       />
 
+      {/* Verify Dialog */}
+      <VerifyUserDialog
+        user={verifyDialog}
+        onClose={() => setVerifyDialog(null)}
+        onConfirm={onVerify}
+      />
+
       {/* Delete Confirmation */}
       <DeleteUserDialog
         user={deleteDialog}
@@ -303,7 +325,17 @@ export function UsersTable({
   );
 }
 
-// ── Dialog Components (keep in same file or separate) ──────────
+// ── Dialogs ────────────────────────────────────────────────
+// All of these use Dialog.Header/Body/Footer — the Dialog primitive already
+// supplies the panel chrome, so nesting a <Card> inside would double it.
+
+function DialogError({ message }: { message: string }) {
+  return (
+    <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+      {message}
+    </div>
+  );
+}
 
 function CreateUserDialog({
   open,
@@ -319,67 +351,87 @@ function CreateUserDialog({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setSubmitting(true);
-    await onSubmit({
-      display_name: displayName,
-      username,
-      phone,
-      email: email || undefined,
-    });
-    setSubmitting(false);
-    onOpenChange(false);
-    setDisplayName("");
-    setUsername("");
-    setPhone("");
-    setEmail("");
+    try {
+      await onSubmit({
+        display_name: displayName || undefined,
+        username: username || undefined,
+        phone: phone || undefined,
+        email: email || undefined,
+      });
+      onOpenChange(false);
+      setDisplayName("");
+      setUsername("");
+      setPhone("");
+      setEmail("");
+    } catch (err: unknown) {
+      setError(
+        getErrorMessage(err, "Failed to create the user"),
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <Card className="w-full max-w-md p-6">
-        <CardTitle className="mb-4">Create user</CardTitle>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            placeholder="Display name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="Email (optional)"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating..." : "Create"}
-            </Button>
-          </div>
+      <Dialog.Header onClose={() => onOpenChange(false)}>
+        Create user
+      </Dialog.Header>
+      <Dialog.Body>
+        <form id="create-user-form" onSubmit={handleSubmit} className="space-y-4">
+          {error && <DialogError message={error} />}
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Display name</span>
+            <Input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Username</span>
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Phone</span>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-bold">Email</span>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <p className="text-xs text-muted-foreground">
+            All fields are optional, but supply at least a phone or an email so
+            the account can sign in.
+          </p>
         </form>
-      </Card>
+      </Dialog.Body>
+      <Dialog.Footer>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="create-user-form" disabled={submitting}>
+            {submitting ? "Creating..." : "Create"}
+          </Button>
+        </div>
+      </Dialog.Footer>
     </Dialog>
   );
 }
@@ -399,34 +451,50 @@ function BanUserDialog({
 }) {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   if (!user) return null;
 
-  const willBan = user.isActive; // if active, we ban; if banned, we unban
+  const willBan = user.isActive; // active -> ban, banned -> unban
   const action = willBan ? "ban" : "unban";
-  const title = `Are you sure you want to ${action} ${user.name}?`;
 
   const handleConfirm = async () => {
+    setError("");
     setLoading(true);
-    await onConfirm(user.id, !user.isActive, reason || undefined);
-    setLoading(false);
-    onClose();
-    setReason("");
+    try {
+      await onConfirm(user.id, willBan, reason || undefined);
+      onClose();
+      setReason("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : `Failed to ${action} user`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Dialog open={!!user} onOpenChange={onClose}>
-      <Card className="w-full max-w-sm p-6">
-        <CardTitle className="mb-4 capitalize">{action} user</CardTitle>
-        <p className="mb-4 text-sm text-muted-foreground">{title}</p>
+      <Dialog.Header onClose={onClose}>
+        <span className="capitalize">{action} user</span>
+      </Dialog.Header>
+      <Dialog.Body>
+        {error && <DialogError message={error} />}
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to {action}{" "}
+          <strong className="text-foreground">{userLabel(user)}</strong>?
+        </p>
         {willBan && (
-          <Input
-            className="mb-4"
-            placeholder="Reason (optional)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
+          <label className="mt-4 block space-y-2">
+            <span className="text-sm font-bold">Reason</span>
+            <Input
+              placeholder="Optional — shown in the audit log"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </label>
         )}
+      </Dialog.Body>
+      <Dialog.Footer>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             Cancel
@@ -439,7 +507,67 @@ function BanUserDialog({
             {loading ? "Processing..." : `Yes, ${action}`}
           </Button>
         </div>
-      </Card>
+      </Dialog.Footer>
+    </Dialog>
+  );
+}
+
+function VerifyUserDialog({
+  user,
+  onClose,
+  onConfirm,
+}: {
+  user: AdminUser | null;
+  onClose: () => void;
+  onConfirm: (userId: string, isVerified: boolean) => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!user) return null;
+
+  const run = async (isVerified: boolean) => {
+    setError("");
+    setLoading(true);
+    try {
+      await onConfirm(user.id, isVerified);
+      onClose();
+    } catch (err: unknown) {
+      setError(
+        getErrorMessage(err, "Failed to update the verification status"),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={onClose}>
+      <Dialog.Header onClose={onClose}>Verification</Dialog.Header>
+      <Dialog.Body>
+        {error && <DialogError message={error} />}
+        <p className="text-sm text-muted-foreground">
+          Set the verification status for{" "}
+          <strong className="text-foreground">{userLabel(user)}</strong>.
+        </p>
+      </Dialog.Body>
+      <Dialog.Footer>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => run(false)}
+            disabled={loading}
+          >
+            Un-verify
+          </Button>
+          <Button onClick={() => run(true)} disabled={loading}>
+            {loading ? "Saving..." : "Verify"}
+          </Button>
+        </div>
+      </Dialog.Footer>
     </Dialog>
   );
 }
@@ -454,24 +582,37 @@ function DeleteUserDialog({
   onConfirm: (userId: string) => Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   if (!user) return null;
 
   const handleDelete = async () => {
+    setError("");
     setLoading(true);
-    await onConfirm(user.id);
-    setLoading(false);
-    onClose();
+    try {
+      await onConfirm(user.id);
+      onClose();
+    } catch (err: unknown) {
+      setError(
+        getErrorMessage(err, "Failed to delete the user"),
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Dialog open={!!user} onOpenChange={onClose}>
-      <Card className="w-full max-w-sm p-6">
-        <CardTitle className="mb-4">Delete user</CardTitle>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Are you sure you want to permanently delete {user.name}? This action
+      <Dialog.Header onClose={onClose}>Delete user</Dialog.Header>
+      <Dialog.Body>
+        {error && <DialogError message={error} />}
+        <p className="text-sm text-muted-foreground">
+          Permanently delete{" "}
+          <strong className="text-foreground">{userLabel(user)}</strong>? This
           cannot be undone.
         </p>
+      </Dialog.Body>
+      <Dialog.Footer>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             Cancel
@@ -484,7 +625,7 @@ function DeleteUserDialog({
             {loading ? "Deleting..." : "Yes, delete"}
           </Button>
         </div>
-      </Card>
+      </Dialog.Footer>
     </Dialog>
   );
 }

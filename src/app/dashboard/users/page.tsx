@@ -27,7 +27,10 @@ export default function UsersPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Users"
+      description="Search members, adjust access, and manage accounts."
+    >
       <UsersTable
         users={usersHook.users}
         loading={usersHook.loading}
@@ -36,6 +39,7 @@ export default function UsersPage() {
         onSearch={usersHook.setSearchQuery}
         onPageChange={usersHook.setPage}
         onBan={usersHook.toggleBan}
+        onVerify={usersHook.toggleVerify}
         onDelete={usersHook.removeUser}
         onCreate={usersHook.addUser}
       />

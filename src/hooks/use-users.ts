@@ -5,15 +5,15 @@ import {
   fetchUsers,
   createUser,
   banUser,
+  verifyUser,
   deleteUser,
+  modifyUserXp,
+  awardAchievement,
+  type ListParams,
 } from "@/lib/api-services";
 import type { AdminUser, PaginatedResponse } from "@/types/api-types";
 
-interface UseUsersOptions {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}
+type UseUsersOptions = ListParams;
 
 export function useUsers(initialParams: UseUsersOptions = {}) {
   const [data, setData] = useState<AdminUser[]>([]);
@@ -77,6 +77,21 @@ export function useUsers(initialParams: UseUsersOptions = {}) {
     load();
   };
 
+  const toggleVerify = async (userId: string, isVerified: boolean) => {
+    await verifyUser(userId, isVerified);
+    load();
+  };
+
+  const adjustXp = async (userId: string, amount: number, reason?: string) => {
+    await modifyUserXp(userId, { amount, reason });
+    load();
+  };
+
+  const grantAchievement = async (userId: string, achievementId: string) => {
+    await awardAchievement(userId, achievementId);
+    load();
+  };
+
   const removeUser = async (userId: string) => {
     await deleteUser(userId);
     load();
@@ -91,6 +106,9 @@ export function useUsers(initialParams: UseUsersOptions = {}) {
     setPage,
     addUser,
     toggleBan,
+    toggleVerify,
+    adjustXp,
+    grantAchievement,
     removeUser,
     refetch: load,
   };
