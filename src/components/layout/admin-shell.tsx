@@ -8,8 +8,6 @@ import {
   Flame,
   LayoutDashboard,
   LogOut,
-  Search,
-  Settings,
   ShieldCheck,
   Users,
   Award,
@@ -20,73 +18,118 @@ import {
   Menu,
   X,
   Timer,
+  UsersRound,
+  BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, humanize, userLabel } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Users;
+  activeKey: string;
+};
+
+/** Primary, day-to-day screens. */
+const navItems: NavItem[] = [
   { href: "/dashboard/users", label: "Users", icon: Users, activeKey: "users" },
+  {
+    href: "/dashboard/bd-users",
+    label: "BD Users",
+    icon: UsersRound,
+    activeKey: "bd-users",
+  },
   {
     href: "/dashboard/courses",
     label: "Courses",
     icon: BookOpen,
     activeKey: "courses",
   },
-  // {
-  //   href: "/dashboard/admins",
-  //   label: "Admins",
-  //   icon: ShieldCheck,
-  //   activeKey: "admins",
-  // },
-  // {
-  //   href: "/dashboard/achievements",
-  //   label: "Achievements",
-  //   icon: Award,
-  //   activeKey: "achievements",
-  // },
-  // {
-  //   href: "/dashboard/roadmap",
-  //   label: "Roadmap",
-  //   icon: Map,
-  //   activeKey: "roadmap",
-  // },
-  // {
-  //   href: "/dashboard/forum",
-  //   label: "Forum",
-  //   icon: MessageSquare,
-  //   activeKey: "forum",
-  // },
-  // {
-  //   href: "/dashboard/activities",
-  //   label: "Activities",
-  //   icon: Activity,
-  //   activeKey: "activities",
-  // },
-  // {
-  //   href: "/dashboard/xp-rules",
-  //   label: "XP Rules",
-  //   icon: Zap,
-  //   activeKey: "xp-rules",
-  // },
-  // {
-  //   href: "/dashboard/forum-cooldown",
-  //   label: "Forum Cooldown",
-  //   icon: Timer,
-  //   activeKey: "forum-cooldown",
-  // },
+  {
+    href: "/dashboard/notifications",
+    label: "Notifications",
+    icon: BellRing,
+    activeKey: "notifications",
+  },
+  {
+    href: "/dashboard/forum-cooldown",
+    label: "Forum Cooldown",
+    icon: Timer,
+    activeKey: "forum-cooldown",
+  },
 ];
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
-  const { logout } = useAuth();
+/**
+ * Screens backed by admin endpoints that exist but aren't part of the daily
+ * workflow. Grouped separately so the primary nav stays short.
+ */
+const secondaryNavItems: NavItem[] = [
+  {
+    href: "/dashboard/roadmap",
+    label: "Roadmaps",
+    icon: Map,
+    activeKey: "roadmap",
+  },
+  {
+    href: "/dashboard/achievements",
+    label: "Achievements",
+    icon: Award,
+    activeKey: "achievements",
+  },
+  {
+    href: "/dashboard/xp-rules",
+    label: "XP Rules",
+    icon: Zap,
+    activeKey: "xp-rules",
+  },
+  {
+    href: "/dashboard/forum",
+    label: "Forum",
+    icon: MessageSquare,
+    activeKey: "forum",
+  },
+  {
+    href: "/dashboard/admins",
+    label: "Admins",
+    icon: ShieldCheck,
+    activeKey: "admins",
+  },
+  {
+    href: "/dashboard/activities",
+    label: "Activities",
+    icon: Activity,
+    activeKey: "activities",
+  },
+];
+
+const allNavItems = [...navItems, ...secondaryNavItems];
+
+const navLinkClass =
+  "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
+
+export function AdminShell({
+  children,
+  title,
+  description,
+  actions,
+}: {
+  children: React.ReactNode;
+  /** Page heading. Falls back to the generic workspace headline. */
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  /** Optional buttons rendered beside the page heading. */
+  actions?: React.ReactNode;
+}) {
+  const { logout, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const activeKey =
-    navItems.find((item) => pathname.startsWith(item.href))?.activeKey || "";
+    allNavItems.find((item) => pathname.startsWith(item.href))?.activeKey || "";
 
   const handleNavClick = (href: string) => {
     setMobileMenuOpen(false);
@@ -118,11 +161,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
 
-          <nav className="mt-8 space-y-2">
+          <nav className="mt-8 space-y-1">
             <Link
               href="/dashboard"
               className={cn(
-                "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                navLinkClass,
                 pathname === "/dashboard" && "bg-secondary text-foreground",
               )}
             >
@@ -134,7 +177,25 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  navLinkClass,
+                  activeKey === item.activeKey &&
+                    "bg-secondary text-foreground",
+                )}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            ))}
+
+            <p className="px-3 pb-1 pt-5 text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+              Configuration
+            </p>
+            {secondaryNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  navLinkClass,
                   activeKey === item.activeKey &&
                     "bg-secondary text-foreground",
                 )}
@@ -144,6 +205,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
+
+          {user && (
+            <div className="mt-auto flex items-center gap-3 rounded-xl border border-border bg-black/20 p-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-black text-orange-100">
+                {userLabel(user, "?").slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold">{userLabel(user)}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {humanize(user.role)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -181,11 +256,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
 
-            <nav className="space-y-2">
+            <nav className="space-y-1">
               <button
                 onClick={() => handleNavClick("/dashboard")}
                 className={cn(
-                  "flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                  navLinkClass,
+                  "w-full",
                   pathname === "/dashboard" && "bg-secondary text-foreground",
                 )}
               >
@@ -197,7 +273,27 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   onClick={() => handleNavClick(item.href)}
                   className={cn(
-                    "flex h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    navLinkClass,
+                    "w-full",
+                    activeKey === item.activeKey &&
+                      "bg-secondary text-foreground",
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </button>
+              ))}
+
+              <p className="px-3 pb-1 pt-5 text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                Configuration
+              </p>
+              {secondaryNavItems.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => handleNavClick(item.href)}
+                  className={cn(
+                    navLinkClass,
+                    "w-full",
                     activeKey === item.activeKey &&
                       "bg-secondary text-foreground",
                   )}
@@ -239,17 +335,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </span>
               </div>
             </div>
-            <div className="hidden max-w-md flex-1 items-center gap-2 lg:flex">
-              <Search className="size-4 text-muted-foreground" />
-              <Input
-                aria-label="Search admin records"
-                placeholder="Search users, courses, IDs..."
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" aria-label="Settings">
-                <Settings />
-              </Button>
+            <div className="flex items-center gap-3">
+              {user && (
+                <div className="hidden text-right sm:block">
+                  <p className="text-xs font-bold leading-tight">
+                    {userLabel(user)}
+                  </p>
+                  <p className="text-xs leading-tight text-muted-foreground">
+                    {humanize(user.role)}
+                  </p>
+                </div>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -273,13 +369,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 Admin workspace
               </div>
               <h1 className="text-2xl font-black tracking-normal sm:text-3xl">
-                Manage the <span className="fire-text">Qabile</span> tribe
+                {title ?? (
+                  <>
+                    Manage the <span className="fire-text">Qabile</span> tribe
+                  </>
+                )}
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Review members, course inventory, publishing status, and
-                operational health from one clean panel.
+                {description ??
+                  "Review members, course inventory, publishing status, and operational health from one clean panel."}
               </p>
             </div>
+            {actions && <div className="flex items-center gap-2">{actions}</div>}
           </div>
           {children}
         </div>
