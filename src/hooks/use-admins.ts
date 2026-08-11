@@ -1,19 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createAdmin, removeAdmin } from "@/lib/api-services";
-import type {
-  AdminEntry,
-  PaginatedResponse,
-  AdminOverview,
-} from "@/types/api-types";
-import { fetchOverview } from "@/lib/api-services";
+import {
+  createAdmin,
+  removeAdmin as removeAdminRequest,
+  fetchOverview,
+  type ListParams,
+} from "@/lib/api-services";
+import type { AdminEntry, AdminOverview } from "@/types/api-types";
+import { userLabel } from "@/lib/utils";
 
-interface UseAdminsOptions {
-  limit?: number;
-  offset?: number;
-  q?: string;
-}
+type UseAdminsOptions = ListParams;
 
 export function useAdmins(initialParams: UseAdminsOptions = {}) {
   const [data, setData] = useState<AdminEntry[]>([]);
@@ -45,7 +42,8 @@ export function useAdmins(initialParams: UseAdminsOptions = {}) {
         if (q) {
           admins = admins.filter(
             (a) =>
-              a.name.toLowerCase().includes(q) ||
+              userLabel(a, "").toLowerCase().includes(q) ||
+              a.username?.toLowerCase().includes(q) ||
               a.email?.toLowerCase().includes(q) ||
               a.phone?.includes(q),
           );
@@ -91,7 +89,7 @@ export function useAdmins(initialParams: UseAdminsOptions = {}) {
   };
 
   const removeAdmin = async (userId: string) => {
-    await removeAdmin(userId);
+    await removeAdminRequest(userId);
     load();
   };
 

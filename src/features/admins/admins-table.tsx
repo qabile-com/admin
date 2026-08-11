@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
+import { humanize, userLabel } from "@/lib/utils";
 import type { AdminEntry } from "@/types/api-types";
 
 interface AdminsTableProps {
@@ -121,11 +122,11 @@ export function AdminsTable({
                 admins.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell className="font-bold">
-                      {admin.displayName || admin.name}
+                      {userLabel(admin)}
                     </TableCell>
-                    <TableCell>{admin.role}</TableCell>
-                    <TableCell>{admin.phone}</TableCell>
-                    <TableCell>{admin.email}</TableCell>
+                    <TableCell>{humanize(admin.role)}</TableCell>
+                    <TableCell>{admin.phone || "—"}</TableCell>
+                    <TableCell>{admin.email || "—"}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"

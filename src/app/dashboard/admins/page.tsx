@@ -27,7 +27,10 @@ export default function AdminsPage() {
   if (!mounted) return null;
 
   return (
-    <AdminShell>
+    <AdminShell
+      title="Admins"
+      description="Grant and revoke administrator access."
+    >
       <AdminsTable
         admins={adminsHook.admins}
         loading={adminsHook.loading}
