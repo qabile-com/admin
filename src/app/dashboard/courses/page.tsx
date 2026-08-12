@@ -1,35 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/layout/admin-shell";
-import { useAuth } from "@/hooks/use-auth";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useCourses } from "@/hooks/use-courses";
 import { CoursesTable } from "@/features/courses/courses-table";
 
 export default function CoursesPage() {
-  const { accessToken } = useAuth();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !accessToken) {
-      router.replace("/");
-    }
-  }, [mounted, accessToken, router]);
-
+  const ready = useRequireAuth();
   const coursesHook = useCourses({ limit: 10, offset: 0 });
 
-  if (!mounted) return null;
+  if (!ready) return null;
 
   return (
     <AdminShell
       title="Courses"
-      description="Publish courses, episodes, and moderate their comments."
+      description="Publish courses. Click a row to manage its episodes and comments."
     >
       <CoursesTable
         courses={coursesHook.courses}
@@ -39,8 +24,6 @@ export default function CoursesPage() {
         onSearch={coursesHook.setSearchQuery}
         onPageChange={coursesHook.setPage}
         onCreate={coursesHook.addCourse}
-        onDelete={coursesHook.removeCourse}
-        onUpdate={coursesHook.editCourse}
         onReorder={coursesHook.reorder}
       />
     </AdminShell>

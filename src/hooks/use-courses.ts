@@ -1,13 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  fetchCourses,
-  createCourse,
-  updateCourse,
-  deleteCourse,
-  reorderCourses,
-} from "@/lib/api-services";
+import { fetchCourses, createCourse, reorderCourses } from "@/lib/api-services";
+import { rememberEntities } from "@/lib/entity-cache";
 import type { AdminCourse, PaginatedResponse } from "@/types/api-types";
 
 interface UseCoursesOptions {
@@ -16,6 +11,11 @@ interface UseCoursesOptions {
   q?: string;
 }
 
+/**
+ * Backs the Courses list page: browse, search, create, reorder. Editing or
+ * deleting a specific course happens on /dashboard/courses/[id], which calls
+ * updateCourse/deleteCourse directly — no list refresh to route through here.
+ */
 export function useCourses(initialParams: UseCoursesOptions = {}) {
   const [data, setData] = useState<AdminCourse[]>([]);
   const [meta, setMeta] = useState({
@@ -38,6 +38,7 @@ export function useCourses(initialParams: UseCoursesOptions = {}) {
           setData(response.data);
           setMeta(response.meta);
           setError(null);
+          rememberEntities("courses", response.data);
         }
       })
       .catch((err) => {
@@ -69,16 +70,6 @@ export function useCourses(initialParams: UseCoursesOptions = {}) {
     load();
   };
 
-  const editCourse = async (courseId: string, data: Partial<AdminCourse>) => {
-    await updateCourse(courseId, data);
-    load();
-  };
-
-  const removeCourse = async (courseId: string) => {
-    await deleteCourse(courseId);
-    load();
-  };
-
   const reorder = async (items: { id: string; sortOrder: number }[]) => {
     await reorderCourses(items);
     load();
@@ -92,8 +83,6 @@ export function useCourses(initialParams: UseCoursesOptions = {}) {
     setSearchQuery,
     setPage,
     addCourse,
-    editCourse,
-    removeCourse,
     reorder,
     refetch: load,
   };
