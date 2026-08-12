@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Activity as ActivityIcon,
+  // Activity as ActivityIcon,
   Ban,
   BookOpen,
   Map as MapIcon,
@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useOverview } from "@/hooks/use-overview";
-import { formatDateTime, humanize, userLabel } from "@/lib/utils";
+import { humanize, userLabel } from "@/lib/utils";
 
 export default function DashboardOverviewPage() {
   const { accessToken } = useAuth();
@@ -82,12 +82,12 @@ export default function DashboardOverviewPage() {
       icon: MessageCircle,
       href: "/dashboard/forum",
     },
-    {
-      label: "Recent activity",
-      value: overview?.recentActivities?.length,
-      icon: ActivityIcon,
-      href: "/dashboard/activities",
-    },
+    // {
+    //   label: "Recent activity",
+    //   value: overview?.recentActivities?.length,
+    //   icon: ActivityIcon,
+    //   href: "/dashboard/activities",
+    // },
   ];
 
   return (
@@ -123,8 +123,8 @@ export default function DashboardOverviewPage() {
         ))}
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        {/* Recent activity */}
+      <section className="mt-4 grid gap-4">
+        {/* Recent activity — hidden along with the Activities section.
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Recent activity</CardTitle>
@@ -171,6 +171,7 @@ export default function DashboardOverviewPage() {
             )}
           </CardContent>
         </Card>
+        */}
 
         {/* Admin roster */}
         <Card>

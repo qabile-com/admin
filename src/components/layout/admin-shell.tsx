@@ -13,13 +13,13 @@ import {
   Award,
   Map,
   MessageSquare,
-  Activity,
+  // Activity,
   Zap,
   Menu,
   X,
   Timer,
   UsersRound,
-  BellRing,
+  // BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, humanize, userLabel } from "@/lib/utils";
@@ -48,12 +48,12 @@ const navItems: NavItem[] = [
     icon: BookOpen,
     activeKey: "courses",
   },
-  {
-    href: "/dashboard/notifications",
-    label: "Notifications",
-    icon: BellRing,
-    activeKey: "notifications",
-  },
+  // {
+  //   href: "/dashboard/notifications",
+  //   label: "Notifications",
+  //   icon: BellRing,
+  //   activeKey: "notifications",
+  // },
   {
     href: "/dashboard/forum-cooldown",
     label: "Forum Cooldown",
@@ -97,12 +97,12 @@ const secondaryNavItems: NavItem[] = [
     icon: ShieldCheck,
     activeKey: "admins",
   },
-  {
-    href: "/dashboard/activities",
-    label: "Activities",
-    icon: Activity,
-    activeKey: "activities",
-  },
+  // {
+  //   href: "/dashboard/activities",
+  //   label: "Activities",
+  //   icon: Activity,
+  //   activeKey: "activities",
+  // },
 ];
 
 const allNavItems = [...navItems, ...secondaryNavItems];
