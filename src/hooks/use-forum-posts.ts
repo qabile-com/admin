@@ -1,12 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  fetchForumPosts,
-  pinForumPost,
-  deleteForumPost,
-  deleteForumComment,
-} from "@/lib/api-services";
+import { fetchForumPosts, pinForumPost, deleteForumPost } from "@/lib/api-services";
+import { rememberEntities } from "@/lib/entity-cache";
 import type { ForumPost, PaginatedResponse } from "@/types/api-types";
 
 interface UseForumOptions {
@@ -15,6 +11,11 @@ interface UseForumOptions {
   q?: string;
 }
 
+/**
+ * Backs the Forum posts list: browse, search, pin, delete. Comment
+ * moderation and likes both live on /dashboard/forum/[postId] now, which
+ * calls deleteForumComment directly — comments never render on the list.
+ */
 export function useForumPosts(initialParams: UseForumOptions = {}) {
   const [data, setData] = useState<ForumPost[]>([]);
   const [meta, setMeta] = useState({
@@ -36,6 +37,7 @@ export function useForumPosts(initialParams: UseForumOptions = {}) {
           setData(res.data);
           setMeta(res.meta);
           setError(null);
+          rememberEntities("forum-posts", res.data);
         }
       })
       .catch((err) => {
@@ -69,11 +71,6 @@ export function useForumPosts(initialParams: UseForumOptions = {}) {
     load();
   };
 
-  const removeComment = async (commentId: string) => {
-    await deleteForumComment(commentId);
-    load(); // refresh list to reflect changes
-  };
-
   return {
     posts: data,
     meta,
@@ -83,7 +80,6 @@ export function useForumPosts(initialParams: UseForumOptions = {}) {
     setPage,
     togglePin,
     removePost,
-    removeComment,
     refetch: load,
   };
 }

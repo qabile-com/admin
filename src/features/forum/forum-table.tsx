@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import { Search, Pin, PinOff, Trash2, ChevronDown, Heart } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Pin, PinOff, Trash2, ChevronRight, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,8 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog } from "@/components/ui/dialog";
-import { useForumLikes } from "@/hooks/use-forum-likes";
+import { useConfirmDelete } from "@/components/ui/confirm-dialog";
 import { useForumBlocks } from "@/hooks/use-forum-blocks";
 import { formatDateTime, shortId, userLabel } from "@/lib/utils";
 import type { ForumPost } from "@/types/api-types";
@@ -35,9 +35,12 @@ interface ForumTableProps {
   onPostsPageChange: (page: number) => void;
   onTogglePin: (postId: string, isPinned: boolean) => Promise<void>;
   onDeletePost: (postId: string) => Promise<void>;
-  onDeleteComment: (commentId: string) => Promise<void>;
 }
 
+/**
+ * Posts list (browse/search/pin/delete, click a row for comments + likes)
+ * plus the Blocks tab, which stays flat here — no editing, no nesting.
+ */
 export function ForumTable({
   posts,
   postsLoading,
@@ -47,16 +50,11 @@ export function ForumTable({
   onPostsPageChange,
   onTogglePin,
   onDeletePost,
-  onDeleteComment,
 }: ForumTableProps) {
+  const router = useRouter();
+  const confirmDelete = useConfirmDelete();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"posts" | "blocks">("posts");
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
-  const [deletePostId, setDeletePostId] = useState<string | null>(null);
-  const [deleteCommentId, setDeleteCommentId] = useState<string | null>(null);
-  const [likesDialogPostId, setLikesDialogPostId] = useState<string | null>(
-    null,
-  );
 
   const blocksHook = useForumBlocks({ limit: 10, offset: 0 });
 
@@ -68,6 +66,22 @@ export function ForumTable({
   const handleBlocksSearch = (e: React.FormEvent) => {
     e.preventDefault();
     blocksHook.setSearchQuery(searchQuery);
+  };
+
+  const handleDeletePost = (post: ForumPost) => {
+    confirmDelete({
+      entityLabel: "post",
+      entityName: post.text.length > 60 ? `${post.text.slice(0, 60)}…` : post.text,
+      description: (
+        <>
+          Permanently delete this post
+          {post.comments.length > 0 &&
+            ` and its ${post.comments.length} comment${post.comments.length === 1 ? "" : "s"}`}
+          ? This cannot be undone.
+        </>
+      ),
+      onConfirm: () => onDeletePost(post.id),
+    });
   };
 
   const postsCurrentPage = postsMeta.offset / postsMeta.limit + 1;
@@ -119,7 +133,7 @@ export function ForumTable({
                 {postsError.message}
               </div>
             )}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border border-white/5">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -128,7 +142,7 @@ export function ForumTable({
                     <TableHead>Likes</TableHead>
                     <TableHead>Pinned</TableHead>
                     <TableHead>Comments</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
+                    <TableHead className="w-20">Actions</TableHead>
                     <TableHead className="w-8" />
                   </TableRow>
                 </TableHeader>
@@ -152,158 +166,63 @@ export function ForumTable({
                       </TableCell>
                     </TableRow>
                   ) : (
-                    posts.map((post) => {
-                      const isExpanded = expandedPostId === post.id;
-                      return (
-                        <Fragment key={post.id}>
-                          <TableRow
-                            className="cursor-pointer"
-                            onClick={() =>
-                              setExpandedPostId(isExpanded ? null : post.id)
-                            }
-                          >
-                            <TableCell>
-                              <div className="font-bold line-clamp-1">
-                                {post.text}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {post.location ? `${post.location} · ` : ""}
-                                {formatDateTime(post.createdAt)}
-                              </div>
-                            </TableCell>
-                            <TableCell
-                              className="font-mono text-xs"
-                              title={post.authorId}
+                    posts.map((post) => (
+                      <TableRow
+                        key={post.id}
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/forum/${post.id}`)}
+                      >
+                        <TableCell>
+                          <div className="line-clamp-1 font-bold">{post.text}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {post.location ? `${post.location} · ` : ""}
+                            {formatDateTime(post.createdAt)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs" title={post.authorId}>
+                          {shortId(post.authorId)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Heart className="size-3 text-red-400" />
+                            {post.likes}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={post.isPinned ? "warning" : "muted"}>
+                            {post.isPinned ? "Pinned" : "No"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{post.comments.length}</TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={post.isPinned ? "Unpin post" : "Pin post"}
+                              onClick={() => onTogglePin(post.id, !post.isPinned)}
                             >
-                              {shortId(post.authorId)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Heart className="size-3 text-red-400" />
-                                {post.likes}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={post.isPinned ? "warning" : "muted"}
-                              >
-                                {post.isPinned ? "Pinned" : "No"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{post.comments.length}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  aria-label={
-                                    post.isPinned ? "Unpin post" : "Pin post"
-                                  }
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onTogglePin(post.id, !post.isPinned);
-                                  }}
-                                >
-                                  {post.isPinned ? (
-                                    <PinOff className="size-4" />
-                                  ) : (
-                                    <Pin className="size-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  aria-label="Delete post"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeletePostId(post.id);
-                                  }}
-                                >
-                                  <Trash2 className="size-4 text-red-300" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Expand post"
-                                className={isExpanded ? "rotate-180" : ""}
-                              >
-                                <ChevronDown className="size-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                          {isExpanded && (
-                            <TableRow className="hover:bg-transparent">
-                              <TableCell
-                                colSpan={7}
-                                className="bg-black/20 p-4"
-                              >
-                                <div className="space-y-3">
-                                  {/* Likes section */}
-                                  <div>
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      onClick={() =>
-                                        setLikesDialogPostId(post.id)
-                                      }
-                                    >
-                                      <Heart className="size-4 mr-1" /> View
-                                      likes ({post.likes})
-                                    </Button>
-                                  </div>
-                                  {/* Comments */}
-                                  <div>
-                                    <p className="text-xs font-bold uppercase text-muted-foreground mb-2">
-                                      Comments ({post.comments.length})
-                                    </p>
-                                    {post.comments.length === 0 ? (
-                                      <p className="text-sm text-muted-foreground">
-                                        No comments.
-                                      </p>
-                                    ) : (
-                                      post.comments.map((comment) => (
-                                        <div
-                                          key={comment.id}
-                                          className="flex items-center justify-between rounded border bg-black/10 p-2 mb-2"
-                                        >
-                                          <div>
-                                            <p className="text-sm">
-                                              {comment.text}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                              by{" "}
-                                              <span
-                                                className="font-mono"
-                                                title={comment.authorId}
-                                              >
-                                                {shortId(comment.authorId)}
-                                              </span>{" "}
-                                              · {formatDateTime(comment.createdAt)}
-                                            </p>
-                                          </div>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() =>
-                                              setDeleteCommentId(comment.id)
-                                            }
-                                          >
-                                            <Trash2 className="size-4 text-red-300" />
-                                          </Button>
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </Fragment>
-                      );
-                    })
+                              {post.isPinned ? (
+                                <PinOff className="size-4" />
+                              ) : (
+                                <Pin className="size-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Delete post"
+                              onClick={() => handleDeletePost(post)}
+                            >
+                              <Trash2 className="size-4 text-red-300" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <ChevronRight className="size-4 text-muted-foreground" />
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
@@ -344,7 +263,7 @@ export function ForumTable({
                 {blocksHook.error.message}
               </div>
             )}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border border-white/5">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -377,9 +296,7 @@ export function ForumTable({
                       <TableRow key={block.id}>
                         <TableCell>{userLabel(block.blocker)}</TableCell>
                         <TableCell>{userLabel(block.blockedUser)}</TableCell>
-                        <TableCell>
-                          {formatDateTime(block.blockedAt)}
-                        </TableCell>
+                        <TableCell>{formatDateTime(block.blockedAt)}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -415,140 +332,6 @@ export function ForumTable({
           </>
         )}
       </CardContent>
-
-      {/* Delete Post Dialog */}
-      <DeleteConfirmationDialog
-        open={!!deletePostId}
-        onClose={() => setDeletePostId(null)}
-        onConfirm={async () => {
-          if (deletePostId) {
-            await onDeletePost(deletePostId);
-            setDeletePostId(null);
-          }
-        }}
-        title="Delete Post"
-        message="Are you sure you want to delete this post? This action cannot be undone."
-      />
-
-      {/* Delete Comment Dialog */}
-      <DeleteConfirmationDialog
-        open={!!deleteCommentId}
-        onClose={() => setDeleteCommentId(null)}
-        onConfirm={async () => {
-          if (deleteCommentId) {
-            await onDeleteComment(deleteCommentId);
-            setDeleteCommentId(null);
-          }
-        }}
-        title="Delete Comment"
-        message="Are you sure you want to delete this comment?"
-      />
-
-      {/* Likes Dialog */}
-      <LikesDialog
-        postId={likesDialogPostId}
-        onClose={() => setLikesDialogPostId(null)}
-      />
     </Card>
-  );
-}
-
-// ─── Reusable Delete Dialog ──────────────────────
-function DeleteConfirmationDialog({
-  open,
-  onClose,
-  onConfirm,
-  title,
-  message,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-  title: string;
-  message: string;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-      await onConfirm();
-      onClose();
-    } catch (err: unknown) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <Dialog.Header>{title}</Dialog.Header>
-      <Dialog.Body>
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </Dialog.Body>
-      <Dialog.Footer>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={loading}
-          >
-            {loading ? "Deleting..." : "Yes, delete"}
-          </Button>
-        </div>
-      </Dialog.Footer>
-    </Dialog>
-  );
-}
-
-// ─── Likes Dialog ────────────────────────────────
-function LikesDialog({
-  postId,
-  onClose,
-}: {
-  postId: string | null;
-  onClose: () => void;
-}) {
-  const { likes, loading, error } = useForumLikes(postId);
-  if (!postId) return null;
-
-  return (
-    <Dialog open={!!postId} onOpenChange={onClose}>
-      <Dialog.Header>Post Likes</Dialog.Header>
-      <Dialog.Body>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading likes...</p>
-        ) : error ? (
-          <p className="text-sm text-red-300">{error.message}</p>
-        ) : likes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No likes yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {likes.map((like) => (
-              <div
-                key={like.id}
-                className="flex items-center justify-between rounded border bg-black/10 p-2"
-              >
-                <span className="font-bold">{userLabel(like.user)}</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDateTime(like.likedAt)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Dialog.Body>
-      <Dialog.Footer>
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </Dialog.Footer>
-    </Dialog>
   );
 }

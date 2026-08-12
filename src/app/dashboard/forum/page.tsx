@@ -1,35 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/layout/admin-shell";
-import { useAuth } from "@/hooks/use-auth";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useForumPosts } from "@/hooks/use-forum-posts";
 import { ForumTable } from "@/features/forum/forum-table";
 
 export default function ForumPage() {
-  const { accessToken } = useAuth();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !accessToken) {
-      router.replace("/");
-    }
-  }, [mounted, accessToken, router]);
-
+  const ready = useRequireAuth();
   const postsHook = useForumPosts({ limit: 10, offset: 0 });
 
-  if (!mounted) return null;
+  if (!ready) return null;
 
   return (
     <AdminShell
       title="Forum"
-      description="Moderate posts, comments, likes, and blocks."
+      description="Moderate posts and blocks. Click a post for comments and likes."
     >
       <ForumTable
         posts={postsHook.posts}
@@ -40,7 +25,6 @@ export default function ForumPage() {
         onPostsPageChange={postsHook.setPage}
         onTogglePin={postsHook.togglePin}
         onDeletePost={postsHook.removePost}
-        onDeleteComment={postsHook.removeComment}
       />
     </AdminShell>
   );
