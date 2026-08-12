@@ -7,6 +7,7 @@ import {
   updateAchievement,
   deleteAchievement,
 } from "@/lib/api-services";
+import { rememberEntities } from "@/lib/entity-cache";
 import type { Achievement, PaginatedResponse } from "@/types/api-types";
 
 interface UseAchievementsOptions {
@@ -36,6 +37,7 @@ export function useAchievements(initialParams: UseAchievementsOptions = {}) {
           setData(res.data);
           setMeta(res.meta);
           setError(null);
+          rememberEntities("achievements", res.data);
         }
       })
       .catch((err) => {

@@ -15,6 +15,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
+import { useConfirmDelete } from "@/components/ui/confirm-dialog";
+import { FormField } from "@/components/ui/form-field";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage, humanize } from "@/lib/utils";
 import type { Achievement } from "@/types/api-types";
 
@@ -46,14 +51,22 @@ export function AchievementsTable({
   onUpdate,
   onDelete,
 }: AchievementsTableProps) {
+  const confirmDelete = useConfirmDelete();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [editDialog, setEditDialog] = useState<Achievement | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchQuery);
+  };
+
+  const handleDelete = (achievement: Achievement) => {
+    confirmDelete({
+      entityLabel: "achievement",
+      entityName: achievement.title,
+      onConfirm: () => onDelete(achievement.id),
+    });
   };
 
   const currentPage = meta.offset / meta.limit + 1;
@@ -89,7 +102,7 @@ export function AchievementsTable({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-white/5">
           <Table>
             <TableHeader>
               <TableRow>
@@ -124,7 +137,7 @@ export function AchievementsTable({
                 achievements.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-bold">{a.title}</TableCell>
-                    <TableCell>{a.slug}</TableCell>
+                    <TableCell className="font-mono text-xs">{a.slug}</TableCell>
                     <TableCell title={a.triggerType}>
                       {humanize(a.triggerType)}
                     </TableCell>
@@ -148,7 +161,7 @@ export function AchievementsTable({
                           variant="ghost"
                           size="icon"
                           aria-label="Delete achievement"
-                          onClick={() => setDeleteId(a.id)}
+                          onClick={() => handleDelete(a)}
                         >
                           <Trash2 className="size-4 text-red-300" />
                         </Button>
@@ -189,68 +202,85 @@ export function AchievementsTable({
         </div>
       </CardContent>
 
-      {/* Create Dialog */}
-      <CreateAchievementDialog
-        open={showCreate}
-        onOpenChange={setShowCreate}
-        onSubmit={onCreate}
-      />
-
-      {/* Edit Dialog */}
-      <EditAchievementDialog
+      <AchievementDialog open={showCreate} onOpenChange={setShowCreate} onSubmit={onCreate} />
+      <AchievementDialog
+        key={editDialog?.id}
         achievement={editDialog}
-        onClose={() => setEditDialog(null)}
-        onUpdate={onUpdate}
-      />
-
-      {/* Delete Dialog */}
-      <DeleteAchievementDialog
-        id={deleteId}
-        onClose={() => setDeleteId(null)}
-        onConfirm={onDelete}
+        open={!!editDialog}
+        onOpenChange={(open) => !open && setEditDialog(null)}
+        onSubmit={async (data) => {
+          if (editDialog) await onUpdate(editDialog.id, data);
+        }}
       />
     </Card>
   );
 }
 
-// ─── Dialogs ──────────────────────────────────────────
+// ─── Create/edit dialog ─────────────────────────────────
+const TRIGGER_PRESETS = [
+  "eligible_activity_count",
+  "course_completed",
+  "streak_days",
+  "referral_count",
+  "forum_post_count",
+  "xp_milestone",
+];
+const CUSTOM_TRIGGER = "__custom__";
 
-function CreateAchievementDialog({
+function AchievementDialog({
+  achievement,
   open,
   onOpenChange,
   onSubmit,
 }: {
+  achievement?: Achievement | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: Partial<Achievement>) => Promise<void>;
 }) {
-  const [form, setForm] = useState({
-    slug: "",
-    title: "",
-    description: "",
-    imageUrl: "",
-    triggerType: "eligible_activity_count",
-    isRepeatable: true,
-    isShareable: true,
-    isActive: true,
-    threshold: "1",
-    xpEarned: "0",
-    config: "{}",
-  });
+  const isEdit = !!achievement;
+
+  const initialTriggerType = achievement?.triggerType ?? TRIGGER_PRESETS[0];
+  const isKnownTrigger = TRIGGER_PRESETS.includes(initialTriggerType);
+
+  const [slug, setSlug] = useState(achievement?.slug ?? "");
+  const [title, setTitle] = useState(achievement?.title ?? "");
+  const [description, setDescription] = useState(achievement?.description ?? "");
+  const [imageUrl, setImageUrl] = useState(achievement?.imageUrl ?? "");
+  const [triggerPreset, setTriggerPreset] = useState(
+    isKnownTrigger ? initialTriggerType : CUSTOM_TRIGGER,
+  );
+  const [customTrigger, setCustomTrigger] = useState(isKnownTrigger ? "" : initialTriggerType);
+  const [threshold, setThreshold] = useState(String(achievement?.threshold ?? 1));
+  const [xpEarned, setXpEarned] = useState(String(achievement?.xpEarned ?? 0));
+  const [configText, setConfigText] = useState(
+    JSON.stringify(achievement?.config ?? {}, null, 2),
+  );
+  const [isActive, setIsActive] = useState(achievement?.isActive ?? true);
+  const [isRepeatable, setIsRepeatable] = useState(achievement?.isRepeatable ?? true);
+  const [isShareable, setIsShareable] = useState(achievement?.isShareable ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (field: string, value: string | boolean) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const triggerType = triggerPreset === CUSTOM_TRIGGER ? customTrigger : triggerPreset;
+
+  let configError = "";
+  if (configText.trim()) {
+    try {
+      JSON.parse(configText);
+    } catch {
+      configError = "Not valid JSON";
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     let config: Record<string, unknown> = {};
-    if (form.config.trim()) {
+    if (configText.trim()) {
       try {
-        config = JSON.parse(form.config);
+        config = JSON.parse(configText);
       } catch {
         setError("Config must be valid JSON.");
         return;
@@ -260,357 +290,148 @@ function CreateAchievementDialog({
     setSubmitting(true);
     try {
       await onSubmit({
-        slug: form.slug,
-        title: form.title,
-        description: form.description,
-        imageUrl: form.imageUrl || null,
-        triggerType: form.triggerType,
-        isRepeatable: form.isRepeatable,
-        isShareable: form.isShareable,
-        isActive: form.isActive,
-        threshold: Number(form.threshold),
-        xpEarned: Number(form.xpEarned),
+        slug,
+        title,
+        description,
+        imageUrl: imageUrl || null,
+        triggerType,
+        isRepeatable,
+        isShareable,
+        isActive,
+        threshold: Number(threshold),
+        xpEarned: Number(xpEarned),
         config,
       });
       onOpenChange(false);
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to create the achievement"));
+      setError(getErrorMessage(err, `Failed to ${isEdit ? "save" : "create"} the achievement`));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <Dialog.Header>New Achievement</Dialog.Header>
+    <Dialog open={open} onOpenChange={onOpenChange} size="lg" preventClose={submitting}>
+      <Dialog.Header onClose={() => onOpenChange(false)} closeDisabled={submitting}>
+        {isEdit ? "Edit achievement" : "New achievement"}
+      </Dialog.Header>
       <Dialog.Body>
-        <form
-          id="create-ach-form"
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
+        <form id="achievement-form" onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
               {error}
             </div>
           )}
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Slug</span>
-            <Input
-              value={form.slug}
-              onChange={(e) => handleChange("slug", e.target.value)}
-              required
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Title</span>
-            <Input
-              value={form.title}
-              onChange={(e) => handleChange("title", e.target.value)}
-              required
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Description</span>
-            <Input
-              value={form.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Image URL</span>
-            <Input
-              value={form.imageUrl}
-              onChange={(e) => handleChange("imageUrl", e.target.value)}
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Trigger Type</span>
-            <Input
-              value={form.triggerType}
-              onChange={(e) => handleChange("triggerType", e.target.value)}
-            />
-          </label>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-bold">Threshold</span>
-              <Input
-                type="number"
-                value={form.threshold}
-                onChange={(e) => handleChange("threshold", e.target.value)}
-                required
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold">XP earned</span>
-              <Input
-                type="number"
-                value={form.xpEarned}
-                onChange={(e) => handleChange("xpEarned", e.target.value)}
-                required
-              />
-            </label>
+            <FormField label="Slug" required>
+              <Input value={slug} onChange={(e) => setSlug(e.target.value)} required />
+            </FormField>
+            <FormField label="Title" required>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </FormField>
           </div>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Config (JSON)</span>
-            <Input
-              value={form.config}
-              onChange={(e) => handleChange("config", e.target.value)}
+          <FormField label="Description">
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          </FormField>
+          <FormField label="Image URL">
+            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+          </FormField>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Trigger type">
+              <Select
+                value={triggerPreset}
+                onChange={(e) => setTriggerPreset(e.target.value)}
+              >
+                {TRIGGER_PRESETS.map((preset) => (
+                  <option key={preset} value={preset}>
+                    {humanize(preset)}
+                  </option>
+                ))}
+                <option value={CUSTOM_TRIGGER}>Other (custom)</option>
+              </Select>
+            </FormField>
+            {triggerPreset === CUSTOM_TRIGGER && (
+              <FormField label="Custom trigger type" required>
+                <Input
+                  value={customTrigger}
+                  onChange={(e) => setCustomTrigger(e.target.value)}
+                  placeholder="e.g. weekly_login_streak"
+                  required
+                />
+              </FormField>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Threshold" required>
+              <Input
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                required
+              />
+            </FormField>
+            <FormField label="XP earned" required>
+              <Input
+                type="number"
+                value={xpEarned}
+                onChange={(e) => setXpEarned(e.target.value)}
+                required
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Config (JSON)" error={configError}>
+            <Textarea
+              value={configText}
+              onChange={(e) => setConfigText(e.target.value)}
+              rows={4}
+              className="font-mono text-xs"
               placeholder="{}"
             />
-          </label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => handleChange("isActive", e.target.checked)}
-              />
-              <span className="text-sm">Active</span>
+          </FormField>
+
+          <div className="grid grid-cols-3 gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Active" />
+              Active
             </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isRepeatable}
-                onChange={(e) => handleChange("isRepeatable", e.target.checked)}
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                checked={isRepeatable}
+                onCheckedChange={setIsRepeatable}
+                aria-label="Repeatable"
               />
-              <span className="text-sm">Repeatable</span>
+              Repeatable
             </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isShareable}
-                onChange={(e) => handleChange("isShareable", e.target.checked)}
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                checked={isShareable}
+                onCheckedChange={setIsShareable}
+                aria-label="Shareable"
               />
-              <span className="text-sm">Shareable</span>
+              Shareable
             </label>
           </div>
         </form>
       </Dialog.Body>
       <Dialog.Footer>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" form="create-ach-form" disabled={submitting}>
-            {submitting ? "Creating..." : "Create"}
-          </Button>
-        </div>
-      </Dialog.Footer>
-    </Dialog>
-  );
-}
-
-function EditAchievementDialog({
-  achievement,
-  onClose,
-  onUpdate,
-}: {
-  achievement: Achievement | null;
-  onClose: () => void;
-  onUpdate: (id: string, data: Partial<Achievement>) => Promise<void>;
-}) {
-  // Lazily seeded from the prop. The parent remounts this via `key`, so the
-  // initializer re-runs whenever a different achievement is opened.
-  const [form, setForm] = useState<Partial<Achievement>>(() =>
-    achievement
-      ? {
-          slug: achievement.slug,
-          title: achievement.title,
-          description: achievement.description,
-          imageUrl: achievement.imageUrl,
-          triggerType: achievement.triggerType,
-          isRepeatable: achievement.isRepeatable,
-          isShareable: achievement.isShareable,
-          isActive: achievement.isActive,
-          threshold: achievement.threshold,
-          xpEarned: achievement.xpEarned,
-          config: achievement.config,
-        }
-      : {},
-  );
-  const [submitting, setSubmitting] = useState(false);
-
-  if (!achievement) return null;
-
-  const handleChange = (field: string, value: unknown) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await onUpdate(achievement.id, form);
-      onClose();
-    } catch (err: unknown) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={!!achievement} onOpenChange={onClose}>
-      <Dialog.Header>Edit Achievement</Dialog.Header>
-      <Dialog.Body>
-        <form id="edit-ach-form" onSubmit={handleSubmit} className="space-y-4">
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Slug</span>
-            <Input
-              value={(form.slug as string) || ""}
-              onChange={(e) => handleChange("slug", e.target.value)}
-              required
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Title</span>
-            <Input
-              value={(form.title as string) || ""}
-              onChange={(e) => handleChange("title", e.target.value)}
-              required
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Description</span>
-            <Input
-              value={(form.description as string) || ""}
-              onChange={(e) => handleChange("description", e.target.value)}
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Image URL</span>
-            <Input
-              value={(form.imageUrl as string) || ""}
-              onChange={(e) => handleChange("imageUrl", e.target.value)}
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Trigger Type</span>
-            <Input
-              value={(form.triggerType as string) || ""}
-              onChange={(e) => handleChange("triggerType", e.target.value)}
-            />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-bold">Threshold</span>
-              <Input
-                type="number"
-                value={form.threshold ?? 0}
-                onChange={(e) =>
-                  handleChange("threshold", Number(e.target.value))
-                }
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-bold">XP earned</span>
-              <Input
-                type="number"
-                value={form.xpEarned ?? 0}
-                onChange={(e) =>
-                  handleChange("xpEarned", Number(e.target.value))
-                }
-              />
-            </label>
-          </div>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Config (JSON)</span>
-            <Input
-              value={JSON.stringify(form.config || {})}
-              onChange={(e) => {
-                try {
-                  handleChange("config", JSON.parse(e.target.value));
-                } catch {}
-              }}
-            />
-          </label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isActive as boolean}
-                onChange={(e) => handleChange("isActive", e.target.checked)}
-              />
-              <span className="text-sm">Active</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isRepeatable as boolean}
-                onChange={(e) => handleChange("isRepeatable", e.target.checked)}
-              />
-              <span className="text-sm">Repeatable</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isShareable as boolean}
-                onChange={(e) => handleChange("isShareable", e.target.checked)}
-              />
-              <span className="text-sm">Shareable</span>
-            </label>
-          </div>
-        </form>
-      </Dialog.Body>
-      <Dialog.Footer>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" form="edit-ach-form" disabled={submitting}>
-            {submitting ? "Saving..." : "Save"}
-          </Button>
-        </div>
-      </Dialog.Footer>
-    </Dialog>
-  );
-}
-
-function DeleteAchievementDialog({
-  id,
-  onClose,
-  onConfirm,
-}: {
-  id: string | null;
-  onClose: () => void;
-  onConfirm: (id: string) => Promise<void>;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  if (!id) return null;
-
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-      await onConfirm(id);
-      onClose();
-    } catch (err: unknown) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={!!id} onOpenChange={onClose}>
-      <Dialog.Header>Delete Achievement</Dialog.Header>
-      <Dialog.Body>
-        <p className="text-sm text-muted-foreground">
-          Are you sure you want to delete this achievement? This action cannot
-          be undone.
-        </p>
-      </Dialog.Body>
-      <Dialog.Footer>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={loading}
+            type="submit"
+            form="achievement-form"
+            disabled={submitting || !!configError}
           >
-            {loading ? "Deleting..." : "Yes, delete"}
+            {submitting ? (isEdit ? "Saving..." : "Creating...") : isEdit ? "Save" : "Create"}
           </Button>
         </div>
       </Dialog.Footer>

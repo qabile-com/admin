@@ -14,7 +14,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
-import { humanize, userLabel } from "@/lib/utils";
+import { useConfirmDelete } from "@/components/ui/confirm-dialog";
+import { FormField } from "@/components/ui/form-field";
+import { getErrorMessage, humanize, userLabel } from "@/lib/utils";
 import type { AdminEntry } from "@/types/api-types";
 
 interface AdminsTableProps {
@@ -47,13 +49,27 @@ export function AdminsTable({
   onCreate,
   onDelete,
 }: AdminsTableProps) {
+  const confirmDelete = useConfirmDelete();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchQuery);
+  };
+
+  const handleDelete = (admin: AdminEntry) => {
+    confirmDelete({
+      entityLabel: "admin",
+      entityName: userLabel(admin),
+      description: (
+        <>
+          Remove <strong className="text-foreground">{userLabel(admin)}</strong>{" "}
+          as an admin? They revert to a regular user immediately.
+        </>
+      ),
+      onConfirm: () => onDelete(admin.id),
+    });
   };
 
   const currentPage = meta.offset / meta.limit + 1;
@@ -88,7 +104,7 @@ export function AdminsTable({
             {error.message}
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-white/5">
           <Table>
             <TableHeader>
               <TableRow>
@@ -132,7 +148,7 @@ export function AdminsTable({
                         variant="ghost"
                         size="icon"
                         aria-label="Remove admin"
-                        onClick={() => setDeleteId(admin.id)}
+                        onClick={() => handleDelete(admin)}
                       >
                         <Trash2 className="size-4 text-red-300" />
                       </Button>
@@ -171,17 +187,10 @@ export function AdminsTable({
         </div>
       </CardContent>
 
-      {/* Create Admin Dialog */}
       <CreateAdminDialog
         open={showCreate}
         onOpenChange={setShowCreate}
         onSubmit={onCreate}
-      />
-      {/* Delete Confirmation */}
-      <DeleteAdminDialog
-        adminId={deleteId}
-        onClose={() => setDeleteId(null)}
-        onConfirm={onDelete}
       />
     </Card>
   );
@@ -204,9 +213,11 @@ function CreateAdminDialog({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setSubmitting(true);
     try {
       await onSubmit({ name, phone, email });
@@ -214,100 +225,53 @@ function CreateAdminDialog({
       setName("");
       setPhone("");
       setEmail("");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to add the admin"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <Dialog.Header>Add Admin</Dialog.Header>
+    <Dialog open={open} onOpenChange={onOpenChange} preventClose={submitting}>
+      <Dialog.Header onClose={() => onOpenChange(false)} closeDisabled={submitting}>
+        Add Admin
+      </Dialog.Header>
       <Dialog.Body>
         <form id="add-admin-form" onSubmit={handleSubmit} className="space-y-4">
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Name</span>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Phone</span>
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-bold">Email</span>
+          {error && (
+            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
+          <FormField label="Name" required>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </FormField>
+          <FormField label="Phone" required>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          </FormField>
+          <FormField label="Email" required>
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-          </label>
+          </FormField>
         </form>
       </Dialog.Body>
       <Dialog.Footer>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button type="submit" form="add-admin-form" disabled={submitting}>
             {submitting ? "Creating..." : "Add Admin"}
-          </Button>
-        </div>
-      </Dialog.Footer>
-    </Dialog>
-  );
-}
-
-function DeleteAdminDialog({
-  adminId,
-  onClose,
-  onConfirm,
-}: {
-  adminId: string | null;
-  onClose: () => void;
-  onConfirm: (userId: string) => Promise<void>;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  if (!adminId) return null;
-
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-      await onConfirm(adminId);
-      onClose();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={!!adminId} onOpenChange={onClose}>
-      <Dialog.Header>Remove Admin</Dialog.Header>
-      <Dialog.Body>
-        <p className="text-sm text-muted-foreground">
-          Are you sure you want to remove this admin? They will revert to a
-          regular user.
-        </p>
-      </Dialog.Body>
-      <Dialog.Footer>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={loading}
-          >
-            {loading ? "Removing..." : "Yes, remove"}
           </Button>
         </div>
       </Dialog.Footer>
