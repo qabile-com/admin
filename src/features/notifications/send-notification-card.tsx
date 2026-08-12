@@ -16,11 +16,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SwitchField } from "@/components/ui/switch";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 
 export function SendNotificationCard() {
   const { send, sending, error, result, reset } = useNotifications();
+  const confirm = useConfirm();
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -56,7 +58,7 @@ export function SendNotificationCard() {
   const removePair = (index: number) =>
     setDataPairs((prev) => prev.filter((_, i) => i !== index));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const requestSend = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError("");
     reset();
@@ -73,20 +75,40 @@ export function SendNotificationCard() {
       return acc;
     }, {});
 
-    try {
-      await send({
-        title: title.trim(),
-        body: body.trim(),
-        sendToAll: sendToAll || undefined,
-        userIds: sendToAll ? undefined : userIds,
-        imageUrl: imageUrl.trim() || null,
-        link: link.trim() || null,
-        data: Object.keys(data).length ? data : undefined,
-      });
-      // Keep the composed message so it can be tweaked and resent.
-    } catch {
-      // `error` from the hook drives the message below.
-    }
+    const payload = {
+      title: title.trim(),
+      body: body.trim(),
+      sendToAll: sendToAll || undefined,
+      userIds: sendToAll ? undefined : userIds,
+      imageUrl: imageUrl.trim() || null,
+      link: link.trim() || null,
+      data: Object.keys(data).length ? data : undefined,
+    };
+
+    confirm({
+      title: sendToAll ? "Send to everyone" : "Send notification",
+      description: sendToAll ? (
+        <>
+          This sends{" "}
+          <strong className="text-foreground">&quot;{payload.title}&quot;</strong>{" "}
+          to every registered device token in the system, right now. There is
+          no way to recall it once sent.
+        </>
+      ) : (
+        <>
+          Send{" "}
+          <strong className="text-foreground">&quot;{payload.title}&quot;</strong>{" "}
+          to {userIds.length} recipient{userIds.length === 1 ? "" : "s"}?
+        </>
+      ),
+      variant: "destructive",
+      confirmLabel: sendToAll ? "Send to everyone" : "Send notification",
+      requireTypedConfirmation: sendToAll ? "SEND" : undefined,
+      onConfirm: async () => {
+        // Keep the composed message afterward so it can be tweaked and resent.
+        await send(payload);
+      },
+    });
   };
 
   return (
@@ -107,7 +129,7 @@ export function SendNotificationCard() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={requestSend} className="space-y-5">
             <label className="space-y-2">
               <span className="text-sm font-bold">Title</span>
               <Input

@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, RotateCcw, Save, TimerOff, TriangleAlert } from "lucide-react";
+import { TimerOff, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useForumCooldown } from "@/hooks/use-forum-cooldown";
-import { cn, formatDuration, getErrorMessage } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 
 /** Quick-pick windows, in seconds. */
 const PRESETS = [
@@ -22,10 +24,9 @@ const PRESETS = [
 
 export function ForumCooldownCard() {
   const { rule, loading, error, refetch, updateRule } = useForumCooldown();
+  const confirm = useConfirm();
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,24 +39,53 @@ export function ForumCooldownCard() {
   const hasChanges =
     !!rule && (seconds !== rule.seconds || isActive !== rule.isActive);
 
-  const handleSave = async () => {
-    setSaveError("");
-    setSaving(true);
-    try {
-      await updateRule({ isActive, seconds });
-      setSavedAt(new Date().toLocaleTimeString());
-    } catch (err: unknown) {
-      setSaveError(getErrorMessage(err, "Failed to save"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDiscard = () => {
     if (!rule) return;
     setSeconds(rule.seconds);
     setIsActive(rule.isActive);
-    setSaveError("");
+  };
+
+  const requestSave = () => {
+    if (!rule) return;
+
+    let description: React.ReactNode;
+    if (rule.isActive !== isActive) {
+      description = isActive ? (
+        <>
+          Turn the cooldown <strong className="text-foreground">on</strong> at{" "}
+          {formatDuration(seconds)}? Members won&apos;t be able to post again
+          within that window.
+        </>
+      ) : (
+        <>
+          Turn the cooldown <strong className="text-foreground">off</strong>?
+          Members will be able to post as often as they like.
+        </>
+      );
+    } else {
+      description = (
+        <>
+          Change the cooldown window from{" "}
+          <strong className="text-foreground">
+            {formatDuration(rule.seconds)}
+          </strong>{" "}
+          to{" "}
+          <strong className="text-foreground">{formatDuration(seconds)}</strong>
+          ? This applies to every member immediately.
+        </>
+      );
+    }
+
+    confirm({
+      title: "Update forum cooldown",
+      description,
+      variant: "warning",
+      confirmLabel: "Save changes",
+      onConfirm: async () => {
+        await updateRule({ isActive, seconds });
+        setSavedAt(new Date().toLocaleTimeString());
+      },
+    });
   };
 
   if (loading) {
@@ -202,38 +232,15 @@ export function ForumCooldownCard() {
             Stored in seconds — {formatDuration(seconds)}
           </p>
         </div>
-
-        {saveError && (
-          <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {saveError}
-          </div>
-        )}
       </CardContent>
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
-        {savedAt && !hasChanges && (
-          <span className="mr-auto text-xs text-muted-foreground">
-            Saved at {savedAt}
-          </span>
-        )}
-        <Button
-          variant="secondary"
-          onClick={handleDiscard}
-          disabled={!hasChanges || saving}
-        >
-          <RotateCcw className="size-4" />
-          Discard
-        </Button>
-        <Button onClick={handleSave} disabled={!hasChanges || saving}>
-          {saving ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          {saving ? "Saving..." : "Save changes"}
-        </Button>
-      </div>
+      <SaveDiscardBar
+        hasChanges={hasChanges}
+        saving={false}
+        savedAt={savedAt}
+        onSave={requestSave}
+        onDiscard={handleDiscard}
+      />
     </Card>
   );
 }

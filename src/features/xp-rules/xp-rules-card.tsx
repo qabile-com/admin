@@ -1,22 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Loader2,
-  RotateCcw,
-  Save,
-  TriangleAlert,
-  UserPlus,
-  Users,
-  Zap,
-} from "lucide-react";
+import { TriangleAlert, UserPlus, Users, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useXpRules } from "@/hooks/use-xp-rules";
-import { cn, getErrorMessage } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { XpRuleKind } from "@/types/api-types";
 
 /** Renders both XP reward rules the API exposes. */
@@ -57,10 +51,9 @@ function XpRuleCard({
   effect: (amount: number) => string;
 }) {
   const { rule, loading, error, refetch, updateRule } = useXpRules(kind);
+  const confirm = useConfirm();
   const [amount, setAmount] = useState(0);
   const [isActive, setIsActive] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,24 +66,50 @@ function XpRuleCard({
   const hasChanges =
     !!rule && (amount !== rule.amount || isActive !== rule.isActive);
 
-  const handleSave = async () => {
-    setSaveError("");
-    setSaving(true);
-    try {
-      await updateRule({ isActive, amount });
-      setSavedAt(new Date().toLocaleTimeString());
-    } catch (err: unknown) {
-      setSaveError(getErrorMessage(err, "Failed to save"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDiscard = () => {
     if (!rule) return;
     setAmount(rule.amount);
     setIsActive(rule.isActive);
-    setSaveError("");
+  };
+
+  const requestSave = () => {
+    if (!rule) return;
+
+    let description: React.ReactNode;
+    if (rule.isActive !== isActive) {
+      description = isActive ? (
+        <>
+          Turn the {heading.toLowerCase()} <strong className="text-foreground">on</strong>{" "}
+          at {amount} XP?
+        </>
+      ) : (
+        <>
+          Turn the {heading.toLowerCase()}{" "}
+          <strong className="text-foreground">off</strong>? No XP will be
+          granted until it&apos;s re-enabled.
+        </>
+      );
+    } else {
+      description = (
+        <>
+          Change the {heading.toLowerCase()} from{" "}
+          <strong className="text-foreground">{rule.amount} XP</strong> to{" "}
+          <strong className="text-foreground">{amount} XP</strong>? This
+          applies to every future event immediately.
+        </>
+      );
+    }
+
+    confirm({
+      title: `Update ${heading.toLowerCase()}`,
+      description,
+      variant: "warning",
+      confirmLabel: "Save changes",
+      onConfirm: async () => {
+        await updateRule({ isActive, amount });
+        setSavedAt(new Date().toLocaleTimeString());
+      },
+    });
   };
 
   if (loading) {
@@ -202,37 +221,15 @@ function XpRuleCard({
             </span>
           </div>
         </div>
-
-        {saveError && (
-          <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {saveError}
-          </div>
-        )}
       </CardContent>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
-        {savedAt && !hasChanges && (
-          <span className="mr-auto text-xs text-muted-foreground">
-            Saved at {savedAt}
-          </span>
-        )}
-        <Button
-          variant="secondary"
-          onClick={handleDiscard}
-          disabled={!hasChanges || saving}
-        >
-          <RotateCcw className="size-4" />
-          Discard
-        </Button>
-        <Button onClick={handleSave} disabled={!hasChanges || saving}>
-          {saving ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          {saving ? "Saving..." : "Save"}
-        </Button>
-      </div>
+      <SaveDiscardBar
+        hasChanges={hasChanges}
+        saving={false}
+        savedAt={savedAt}
+        onSave={requestSave}
+        onDiscard={handleDiscard}
+      />
     </Card>
   );
 }
