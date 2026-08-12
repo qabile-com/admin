@@ -15,7 +15,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
-import { formatDateTime, getErrorMessage, humanize, shortId, userLabel } from "@/lib/utils";
+import { UserPickerDialog } from "./user-picker-dialog";
+import {
+  formatDateTime,
+  getErrorMessage,
+  humanize,
+  shortId,
+  userLabel,
+} from "@/lib/utils";
 import type { BdUser } from "@/types/api-types";
 
 interface BdUsersTableProps {
@@ -48,29 +55,6 @@ export function BdUsersTable({
   const [openUserId, setOpenUserId] = useState<string | null>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [removeDialog, setRemoveDialog] = useState<BdUser | null>(null);
-  const [assignUserId, setAssignUserId] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [assignError, setAssignError] = useState("");
-
-  const handleAssign = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = assignUserId.trim();
-    if (!id) return;
-
-    setAssignError("");
-    setSubmitting(true);
-    try {
-      await onAssign(id);
-      setAssignUserId("");
-      setShowAssign(false);
-    } catch (err: unknown) {
-      setAssignError(
-        getErrorMessage(err, "Failed to assign the BD role"),
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,52 +300,16 @@ export function BdUsersTable({
         </div>
       </CardContent>
 
-      {/* Assign BD User Dialog */}
-      <Dialog open={showAssign} onOpenChange={setShowAssign}>
-        <Dialog.Header onClose={() => setShowAssign(false)}>
-          Assign BD program
-        </Dialog.Header>
-        <Dialog.Body>
-          <form id="assign-bd-form" onSubmit={handleAssign} className="space-y-4">
-            {assignError && (
-              <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                {assignError}
-              </div>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Paste the ID of the user you want to add to the BD program. You
-              can copy it from the Users page.
-            </p>
-            <label className="space-y-2">
-              <span className="text-sm font-bold">User ID</span>
-              <Input
-                placeholder="e.g. 3f8c1a2e-..."
-                value={assignUserId}
-                onChange={(e) => setAssignUserId(e.target.value)}
-                required
-              />
-            </label>
-          </form>
-        </Dialog.Body>
-        <Dialog.Footer>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setShowAssign(false);
-                setAssignUserId("");
-                setAssignError("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" form="assign-bd-form" disabled={submitting}>
-              {submitting ? "Assigning..." : "Assign"}
-            </Button>
-          </div>
-        </Dialog.Footer>
-      </Dialog>
+      {/* Assign BD User — pick from the live user list */}
+      <UserPickerDialog
+        open={showAssign}
+        onOpenChange={setShowAssign}
+        onConfirm={onAssign}
+        title="Assign BD program"
+        confirmLabel="Assign BD"
+        excludeIds={users.map((u) => u.id)}
+        excludeLabel="Already BD"
+      />
 
       {/* Remove BD User Dialog */}
       <RemoveBdUserDialog
