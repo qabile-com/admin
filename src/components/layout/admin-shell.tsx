@@ -115,13 +115,20 @@ export function AdminShell({
   title,
   description,
   actions,
+  header,
 }: {
   children: React.ReactNode;
-  /** Page heading. Falls back to the generic workspace headline. */
+  /** Page heading. Falls back to the generic workspace headline. Ignored if `header` is set. */
   title?: React.ReactNode;
   description?: React.ReactNode;
-  /** Optional buttons rendered beside the page heading. */
+  /** Optional buttons rendered beside the page heading. Ignored if `header` is set. */
   actions?: React.ReactNode;
+  /**
+   * Full replacement for the eyebrow/title/description/actions block —
+   * used by detail pages (see `DetailPageHeader`) that need a back-link and
+   * dynamic status badges, which can't validly nest inside the default `<h1>`.
+   */
+  header?: React.ReactNode;
 }) {
   const { logout, user } = useAuth();
   const pathname = usePathname();
@@ -362,26 +369,28 @@ export function AdminShell({
         </header>
 
         <div className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-xs font-bold text-orange-100">
-                <Flame className="size-3.5" />
-                Admin workspace
+          {header ?? (
+            <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-xs font-bold text-orange-100">
+                  <Flame className="size-3.5" />
+                  Admin workspace
+                </div>
+                <h1 className="text-2xl font-black tracking-normal sm:text-3xl">
+                  {title ?? (
+                    <>
+                      Manage the <span className="fire-text">Qabile</span> tribe
+                    </>
+                  )}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                  {description ??
+                    "Review members, course inventory, publishing status, and operational health from one clean panel."}
+                </p>
               </div>
-              <h1 className="text-2xl font-black tracking-normal sm:text-3xl">
-                {title ?? (
-                  <>
-                    Manage the <span className="fire-text">Qabile</span> tribe
-                  </>
-                )}
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                {description ??
-                  "Review members, course inventory, publishing status, and operational health from one clean panel."}
-              </p>
+              {actions && <div className="flex items-center gap-2">{actions}</div>}
             </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
-          </div>
+          )}
           {children}
         </div>
       </main>
