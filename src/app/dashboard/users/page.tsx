@@ -1,35 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/layout/admin-shell";
-import { useAuth } from "@/hooks/use-auth";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useUsers } from "@/hooks/use-users";
 import { UsersTable } from "@/features/users/users-table";
 
 export default function UsersPage() {
-  const { accessToken } = useAuth();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !accessToken) {
-      router.replace("/");
-    }
-  }, [mounted, accessToken, router]);
-
+  const ready = useRequireAuth();
   const usersHook = useUsers({ limit: 10, offset: 0 });
 
-  if (!mounted) return null;
+  if (!ready) return null;
 
   return (
     <AdminShell
       title="Users"
-      description="Search members, adjust access, and manage accounts."
+      description="Search members and manage accounts. Click a row for the full profile."
     >
       <UsersTable
         users={usersHook.users}
@@ -38,9 +23,6 @@ export default function UsersPage() {
         meta={usersHook.meta}
         onSearch={usersHook.setSearchQuery}
         onPageChange={usersHook.setPage}
-        onBan={usersHook.toggleBan}
-        onVerify={usersHook.toggleVerify}
-        onDelete={usersHook.removeUser}
         onCreate={usersHook.addUser}
       />
     </AdminShell>

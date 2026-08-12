@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   // Activity as ActivityIcon,
@@ -16,28 +14,15 @@ import {
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useOverview } from "@/hooks/use-overview";
 import { humanize, userLabel } from "@/lib/utils";
 
 export default function DashboardOverviewPage() {
-  const { accessToken } = useAuth();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !accessToken) {
-      router.replace("/");
-    }
-  }, [mounted, accessToken, router]);
-
+  const ready = useRequireAuth();
   const { data: overview, loading } = useOverview();
 
-  if (!mounted) return null;
+  if (!ready) return null;
 
   const statCards = [
     {
@@ -199,21 +184,26 @@ export default function DashboardOverviewPage() {
                 No admins found.
               </p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {overview.admins.map((admin) => (
-                  <li key={admin.id} className="flex items-center gap-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-black text-orange-100">
-                      {userLabel(admin, "?").slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold">
-                        {userLabel(admin)}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {admin.email || admin.phone || "—"}
-                      </p>
-                    </div>
-                    <Badge variant="muted">{humanize(admin.role)}</Badge>
+                  <li key={admin.id}>
+                    <Link
+                      href={`/dashboard/users/${admin.id}`}
+                      className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-white/[0.04]"
+                    >
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-black text-orange-100">
+                        {userLabel(admin, "?").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold">
+                          {userLabel(admin)}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {admin.email || admin.phone || "—"}
+                        </p>
+                      </div>
+                      <Badge variant="muted">{humanize(admin.role)}</Badge>
+                    </Link>
                   </li>
                 ))}
               </ul>

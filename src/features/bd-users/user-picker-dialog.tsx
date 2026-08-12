@@ -107,8 +107,10 @@ export function UserPickerDialog({
   const hiddenCount = Math.max(0, totalItems - results.length);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <Dialog.Header onClose={() => onOpenChange(false)}>{title}</Dialog.Header>
+    <Dialog open={open} onOpenChange={onOpenChange} preventClose={submitting}>
+      <Dialog.Header onClose={() => onOpenChange(false)} closeDisabled={submitting}>
+        {title}
+      </Dialog.Header>
 
       <Dialog.Body>
         <div className="space-y-3">

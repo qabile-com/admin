@@ -1,20 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  fetchUsers,
-  createUser,
-  banUser,
-  verifyUser,
-  deleteUser,
-  modifyUserXp,
-  awardAchievement,
-  type ListParams,
-} from "@/lib/api-services";
+import { fetchUsers, createUser, type ListParams } from "@/lib/api-services";
+import { rememberEntities } from "@/lib/entity-cache";
 import type { AdminUser, PaginatedResponse } from "@/types/api-types";
 
 type UseUsersOptions = ListParams;
 
+/**
+ * Backs the Users list page: browse, search, create. Per-user actions
+ * (ban/verify/XP/award/delete) live on /dashboard/users/[id] now and call
+ * the api-services functions directly — there's no "refresh this list"
+ * concern to route through a hook once you're on that page.
+ */
 export function useUsers(initialParams: UseUsersOptions = {}) {
   const [data, setData] = useState<AdminUser[]>([]);
   const [meta, setMeta] = useState({
@@ -37,6 +35,7 @@ export function useUsers(initialParams: UseUsersOptions = {}) {
           setData(response.data);
           setMeta(response.meta);
           setError(null);
+          rememberEntities("users", response.data);
         }
       })
       .catch((err) => {
@@ -68,35 +67,6 @@ export function useUsers(initialParams: UseUsersOptions = {}) {
     load();
   };
 
-  const toggleBan = async (
-    userId: string,
-    isBanned: boolean,
-    reason?: string,
-  ) => {
-    await banUser(userId, { isBanned, reason });
-    load();
-  };
-
-  const toggleVerify = async (userId: string, isVerified: boolean) => {
-    await verifyUser(userId, isVerified);
-    load();
-  };
-
-  const adjustXp = async (userId: string, amount: number, reason?: string) => {
-    await modifyUserXp(userId, { amount, reason });
-    load();
-  };
-
-  const grantAchievement = async (userId: string, achievementId: string) => {
-    await awardAchievement(userId, achievementId);
-    load();
-  };
-
-  const removeUser = async (userId: string) => {
-    await deleteUser(userId);
-    load();
-  };
-
   return {
     users: data,
     meta,
@@ -105,11 +75,6 @@ export function useUsers(initialParams: UseUsersOptions = {}) {
     setSearchQuery,
     setPage,
     addUser,
-    toggleBan,
-    toggleVerify,
-    adjustXp,
-    grantAchievement,
-    removeUser,
     refetch: load,
   };
 }

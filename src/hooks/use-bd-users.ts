@@ -1,12 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  fetchBdUsers,
-  assignBdUser,
-  removeBdUser,
-  fetchInvitedUsers,
-} from "@/lib/api-services";
+import { fetchBdUsers, assignBdUser, fetchInvitedUsers } from "@/lib/api-services";
+import { rememberEntities } from "@/lib/entity-cache";
 import type { BdUser, InvitedUser, PaginatedResponse } from "@/types/api-types";
 
 interface UseBdUsersOptions {
@@ -28,7 +24,6 @@ interface UseBdUsersReturn {
   setSearchQuery: (q: string) => void;
   setPage: (page: number) => void;
   assignUser: (userId: string) => Promise<void>;
-  removeUser: (userId: string) => Promise<void>;
   refetch: () => void;
 }
 
@@ -55,6 +50,9 @@ export function useBdUsers(
           setData(response.data);
           setMeta(response.meta);
           setError(null);
+          // BdUser extends AdminUser and both link to the same
+          // /dashboard/users/[id] page, so they share the "users" cache.
+          rememberEntities("users", response.data);
         }
       })
       .catch((err) => {
@@ -86,11 +84,6 @@ export function useBdUsers(
     load();
   };
 
-  const removeUser = async (userId: string) => {
-    await removeBdUser(userId);
-    load();
-  };
-
   return {
     users: data,
     meta,
@@ -99,7 +92,6 @@ export function useBdUsers(
     setSearchQuery,
     setPage,
     assignUser,
-    removeUser,
     refetch: load,
   };
 }
