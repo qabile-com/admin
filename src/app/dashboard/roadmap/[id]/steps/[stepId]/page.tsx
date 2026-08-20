@@ -17,5 +17,12 @@ export default function StepDetailPage({
 
   if (!ready) return null;
 
-  return <StepDetail roadmapId={id} stepId={stepId} defaultNum={defaultNum} />;
+  return (
+    <StepDetail
+      key={`${id}:${stepId}`}
+      roadmapId={id}
+      stepId={stepId}
+      defaultNum={defaultNum}
+    />
+  );
 }

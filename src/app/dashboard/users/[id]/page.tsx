@@ -15,5 +15,7 @@ export default function UserDetailPage({
   if (!ready) return null;
 
   // UserDetail renders its own <AdminShell> — see the note in user-detail.tsx.
-  return <UserDetail id={id} />;
+  // key={id} forces a full remount if the id ever changes without an unmount,
+  // so stale prop-seeded state can't leak between two different entities.
+  return <UserDetail key={id} id={id} />;
 }

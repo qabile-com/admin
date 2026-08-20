@@ -14,5 +14,5 @@ export default function PostDetailPage({
 
   if (!ready) return null;
 
-  return <PostDetail postId={postId} />;
+  return <PostDetail key={postId} postId={postId} />;
 }

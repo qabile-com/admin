@@ -14,5 +14,5 @@ export default function CourseDetailPage({
 
   if (!ready) return null;
 
-  return <CourseDetail id={id} />;
+  return <CourseDetail key={id} id={id} />;
 }

@@ -14,5 +14,5 @@ export default function RoadmapDetailPage({
 
   if (!ready) return null;
 
-  return <RoadmapDetail id={id} />;
+  return <RoadmapDetail key={id} id={id} />;
 }

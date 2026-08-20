@@ -14,5 +14,11 @@ export default function EpisodeDetailPage({
 
   if (!ready) return null;
 
-  return <EpisodeDetail courseId={id} episodeId={episodeId} />;
+  return (
+    <EpisodeDetail
+      key={`${id}:${episodeId}`}
+      courseId={id}
+      episodeId={episodeId}
+    />
+  );
 }
