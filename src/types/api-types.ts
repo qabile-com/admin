@@ -344,3 +344,31 @@ export interface NotificationDispatchResult {
 export interface NotificationDispatchResponse {
   data: NotificationDispatchResult;
 }
+
+// AdminPushDeliveryRulesResponseDto — /api/v1/admin/notifications/rules
+export interface PushDeliveryRules {
+  mediumEveryCount: number;
+  weakEveryCount: number;
+}
+
+// AdminRebirthRulesResponseDto — /api/v1/admin/rebirth-rules (GET only returns this
+// summary; there is no endpoint that lists individual configured tiers — see RebirthRule).
+export interface RebirthMaxSummary {
+  maximumAllowedRebirth: number;
+}
+
+// AdminRebirthRuleResponseDto — returned by POST /api/v1/admin/rebirth-rules (upsert).
+export interface RebirthRule {
+  id: string;
+  rebirthNumber: number;
+  title: string;
+  isActive: boolean;
+  requiredXp: number;
+}
+
+// UpsertAdminRebirthRuleDto
+export interface UpsertRebirthRuleInput {
+  rebirthNumber: number;
+  requiredXp: number;
+  isActive: boolean;
+}

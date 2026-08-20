@@ -3,6 +3,7 @@
 import { AdminShell } from "@/components/layout/admin-shell";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { SendNotificationCard } from "@/features/notifications/send-notification-card";
+import { NotificationRulesCard } from "@/features/notifications/notification-rules-card";
 
 export default function NotificationsPage() {
   const ready = useRequireAuth();
@@ -14,7 +15,10 @@ export default function NotificationsPage() {
       title="Notifications"
       description="Compose and send a push notification to members."
     >
-      <SendNotificationCard />
+      <div className="space-y-4">
+        <SendNotificationCard />
+        <NotificationRulesCard />
+      </div>
     </AdminShell>
   );
 }

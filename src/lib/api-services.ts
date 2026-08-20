@@ -24,6 +24,10 @@ import type {
   InvitedUser,
   Activity,
   NotificationDispatchResponse,
+  PushDeliveryRules,
+  RebirthMaxSummary,
+  RebirthRule,
+  UpsertRebirthRuleInput,
 } from "@/types/api-types";
 
 /** Every list endpoint takes the same three query params. */
@@ -486,4 +490,32 @@ export const sendNotification = (payload: SendNotificationInput) =>
       "/api/v1/admin/notifications/send",
       payload,
     )
+    .then((r) => r.data);
+
+export const fetchPushDeliveryRules = () =>
+  apiClient
+    .get<PushDeliveryRules>("/api/v1/admin/notifications/rules")
+    .then((r) => r.data);
+
+export const updatePushDeliveryRules = (data: PushDeliveryRules) =>
+  apiClient
+    .patch<PushDeliveryRules>("/api/v1/admin/notifications/rules", data)
+    .then((r) => r.data);
+
+// ─── Rebirth rules ───────────────────────────────
+// GET only returns the derived maximum — there is no endpoint that lists the
+// individual configured tiers (see the note on RebirthRule in api-types.ts).
+export const fetchRebirthRulesSummary = () =>
+  apiClient
+    .get<{ data: RebirthMaxSummary }>("/api/v1/admin/rebirth-rules")
+    .then((r) => r.data.data);
+
+export const upsertRebirthRule = (input: UpsertRebirthRuleInput) =>
+  apiClient
+    .post<RebirthRule>("/api/v1/admin/rebirth-rules", input)
+    .then((r) => r.data);
+
+export const deleteRebirthRule = (id: string) =>
+  apiClient
+    .delete<Success>(`/api/v1/admin/rebirth-rules/${id}`)
     .then((r) => r.data);
