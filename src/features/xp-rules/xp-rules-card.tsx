@@ -5,7 +5,10 @@ import { TriangleAlert, UserPlus, Users, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { IconCircle } from "@/components/ui/icon-circle";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -116,11 +119,11 @@ function XpRuleCard({
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 w-40 animate-pulse rounded-md bg-[var(--glass-2)]" />
+          <Skeleton className="h-5 w-40 rounded-md" />
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="h-16 animate-pulse rounded-xl bg-[var(--glass-2)]" />
-          <div className="h-11 animate-pulse rounded-lg bg-[var(--glass-2)]" />
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-11" />
         </CardContent>
       </Card>
     );
@@ -129,17 +132,18 @@ function XpRuleCard({
   if (error) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-          <div className="flex size-11 items-center justify-center rounded-full bg-red-400/10">
-            <TriangleAlert className="size-5 text-red-300" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold">Couldn&apos;t load {heading}</p>
-            <p className="text-sm text-muted-foreground">{error.message}</p>
-          </div>
-          <Button size="sm" variant="secondary" onClick={refetch}>
-            Try again
-          </Button>
+        <CardContent>
+          <EmptyState
+            icon={TriangleAlert}
+            iconTone="danger"
+            title={`Couldn't load ${heading}`}
+            description={error.message}
+            action={
+              <Button size="sm" variant="secondary" onClick={refetch}>
+                Try again
+              </Button>
+            }
+          />
         </CardContent>
       </Card>
     );
@@ -152,9 +156,9 @@ function XpRuleCard({
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-orange-400/10 text-orange-100">
+            <IconCircle tone="brand" size="size-10" className="rounded-lg">
               <Icon className="size-5" />
-            </div>
+            </IconCircle>
             <div>
               <CardTitle>{heading}</CardTitle>
               <p className="mt-0.5 text-xs text-muted-foreground">{blurb}</p>

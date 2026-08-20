@@ -16,12 +16,16 @@ import {
 } from "lucide-react";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { DetailPageHeader } from "@/components/layout/detail-page-header";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/stat-tile";
 import {
   Table,
   TableBody,
@@ -188,9 +192,13 @@ export function UserDetail({ id }: { id: string }) {
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <TriangleAlert className="size-6 text-red-300" />
-            <p className="text-sm text-muted-foreground">{error.message}</p>
+          <CardContent>
+            <EmptyState
+              icon={TriangleAlert}
+              iconTone="danger"
+              title="Couldn't load user"
+              description={error.message}
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -229,8 +237,8 @@ export function UserDetail({ id }: { id: string }) {
     >
       {loading || !entity ? (
         <div className="space-y-4">
-          <div className="h-40 animate-pulse rounded-xl bg-[var(--glass-2)]" />
-          <div className="h-24 animate-pulse rounded-xl bg-[var(--glass-2)]" />
+          <Skeleton className="h-40 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -269,10 +277,10 @@ export function UserDetail({ id }: { id: string }) {
                 <CardTitle>Progress</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <Stat label="Level" value={entity.level} />
-                  <Stat label="Streak" value={entity.streak} />
-                  <Stat label="XP" value={entity.xp.toLocaleString()} />
+                <div className="grid grid-cols-3 gap-3">
+                  <StatTile label="Level" value={entity.level} />
+                  <StatTile label="Streak" value={entity.streak} />
+                  <StatTile label="XP" value={entity.xp.toLocaleString()} />
                 </div>
                 <div>
                   <div className="mb-1 flex justify-between text-xs text-muted-foreground">
@@ -385,16 +393,12 @@ export function UserDetail({ id }: { id: string }) {
 function NotFoundCard() {
   return (
     <Card>
-      <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-        <div className="flex size-11 items-center justify-center rounded-full bg-secondary">
-          <UserRound className="size-5 text-muted-foreground" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-bold">User not found</p>
-          <p className="text-sm text-muted-foreground">
-            It may have been deleted, or the link is out of date.
-          </p>
-        </div>
+      <CardContent>
+        <EmptyState
+          icon={UserRound}
+          title="User not found"
+          description="It may have been deleted, or the link is out of date."
+        />
       </CardContent>
     </Card>
   );
@@ -418,15 +422,6 @@ function InfoRow({
       >
         {value}
       </span>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-border bg-black/10 py-3">
-      <p className="text-lg font-black">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -526,13 +521,11 @@ function BdProgramCard({ user }: { user: AdminUser }) {
             Invited users
           </p>
           {invited.loading ? (
-            <div className="h-24 animate-pulse rounded-lg bg-[var(--glass-2)]" />
+            <Skeleton className="h-24" />
           ) : invited.users.length === 0 ? (
-            <p className="rounded-lg border border-border bg-black/10 p-4 text-center text-sm text-muted-foreground">
-              No one has used this referral code yet.
-            </p>
+            <EmptyState title="No one has used this referral code yet." />
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-white/5">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -611,11 +604,7 @@ function AwardAchievementDialog({
         Award achievement
       </Dialog.Header>
       <Dialog.Body>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error}
-          </div>
-        )}
+        {error && <Alert className="mb-4">{error}</Alert>}
         <p className="mb-3 text-sm text-muted-foreground">
           Choose an achievement to grant to{" "}
           <strong className="text-foreground">{label}</strong>.
@@ -623,7 +612,7 @@ function AwardAchievementDialog({
         {loadingList ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded-lg bg-[var(--glass-2)]" />
+              <Skeleton key={i} className="h-12" />
             ))}
           </div>
         ) : (
@@ -636,7 +625,7 @@ function AwardAchievementDialog({
                 className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                   selectedId === a.id
                     ? "border-orange-300/40 bg-orange-400/10"
-                    : "border-border bg-black/10 hover:bg-white/[0.04]"
+                    : "border-border bg-black/10 hover:bg-secondary"
                 }`}
               >
                 <span className="min-w-0 truncate font-bold">{a.title}</span>
@@ -718,11 +707,7 @@ function AdjustXpDialog({
         Adjust XP
       </Dialog.Header>
       <Dialog.Body>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error}
-          </div>
-        )}
+        {error && <Alert className="mb-4">{error}</Alert>}
         <form id="adjust-xp-form" onSubmit={handleSubmit} className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Grant or deduct XP for{" "}

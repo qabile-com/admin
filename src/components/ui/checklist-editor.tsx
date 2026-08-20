@@ -72,7 +72,7 @@ export function ChecklistEditor({
                 aria-label={`Remove item ${index + 1}`}
                 onClick={() => removeItem(index)}
               >
-                <X className="size-4 text-red-300" />
+                <X className="size-4 text-destructive" />
               </Button>
             </div>
           ))}

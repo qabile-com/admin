@@ -20,8 +20,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import apiClient from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/utils";
@@ -190,7 +192,11 @@ export function LoginPage() {
 
   // ─── UI ──────────────────────────────────
   return (
-    <main className="grid min-h-dvh lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="relative grid min-h-dvh lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="absolute right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
+
       {/* Left Hero Section */}
       <section className="relative hidden overflow-hidden border-r lg:block">
         <Image
@@ -499,9 +505,5 @@ export function LoginPage() {
 }
 
 function ErrorBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-      {children}
-    </div>
-  );
+  return <Alert>{children}</Alert>;
 }

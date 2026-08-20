@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import { TimerOff, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { IconCircle } from "@/components/ui/icon-circle";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -92,12 +95,12 @@ export function ForumCooldownCard() {
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 w-48 animate-pulse rounded-md bg-[var(--glass-2)]" />
+          <Skeleton className="h-5 w-48 rounded-md" />
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="h-20 animate-pulse rounded-xl bg-[var(--glass-2)]" />
-          <div className="h-11 animate-pulse rounded-lg bg-[var(--glass-2)]" />
-          <div className="h-9 w-2/3 animate-pulse rounded-lg bg-[var(--glass-2)]" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-11" />
+          <Skeleton className="h-9 w-2/3" />
         </CardContent>
       </Card>
     );
@@ -106,17 +109,18 @@ export function ForumCooldownCard() {
   if (error) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-          <div className="flex size-11 items-center justify-center rounded-full bg-red-400/10">
-            <TriangleAlert className="size-5 text-red-300" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold">Couldn&apos;t load the cooldown</p>
-            <p className="text-sm text-muted-foreground">{error.message}</p>
-          </div>
-          <Button size="sm" variant="secondary" onClick={refetch}>
-            Try again
-          </Button>
+        <CardContent>
+          <EmptyState
+            icon={TriangleAlert}
+            iconTone="danger"
+            title="Couldn't load the cooldown"
+            description={error.message}
+            action={
+              <Button size="sm" variant="secondary" onClick={refetch}>
+                Try again
+              </Button>
+            }
+          />
         </CardContent>
       </Card>
     );
@@ -135,9 +139,9 @@ export function ForumCooldownCard() {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-orange-400/10 text-orange-100">
+            <IconCircle tone="brand" size="size-10" className="rounded-lg">
               <TimerOff className="size-5" />
-            </div>
+            </IconCircle>
             <div>
               <CardTitle>Forum post cooldown</CardTitle>
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -205,7 +209,7 @@ export function ForumCooldownCard() {
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
                   seconds === preset.seconds
-                    ? "border-orange-300/40 bg-orange-400/15 text-orange-100"
+                    ? "border-badge-default-border bg-badge-default-bg text-badge-default-text"
                     : "border-border bg-black/20 text-muted-foreground hover:text-foreground",
                 )}
               >

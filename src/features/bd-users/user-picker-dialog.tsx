@@ -2,10 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Search, TriangleAlert, UserRound } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { IconCircle } from "@/components/ui/icon-circle";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchUsers } from "@/lib/api-services";
 import { cn, getErrorMessage, userLabel } from "@/lib/utils";
 import type { AdminUser } from "@/types/api-types";
@@ -128,40 +132,26 @@ export function UserPickerDialog({
             )}
           </div>
 
-          {submitError && (
-            <div className="flex items-start gap-2 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-              <span>{submitError}</span>
-            </div>
-          )}
+          {submitError && <Alert>{submitError}</Alert>}
 
           <div className="max-h-[45vh] min-h-[12rem] overflow-y-auto rounded-lg border border-border bg-black/10">
             {loading && results.length === 0 ? (
               <div className="space-y-2 p-2">
                 {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-14 animate-pulse rounded-lg bg-[var(--glass-2)]"
-                  />
+                  <Skeleton key={i} className="h-14" />
                 ))}
               </div>
             ) : loadError ? (
-              <div className="flex flex-col items-center gap-2 p-8 text-center">
-                <TriangleAlert className="size-5 text-red-300" />
-                <p className="text-sm text-red-100">{loadError}</p>
-              </div>
+              <EmptyState icon={TriangleAlert} iconTone="danger" title={loadError} className="p-8" />
             ) : results.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 p-8 text-center">
-                <div className="flex size-10 items-center justify-center rounded-full bg-secondary">
-                  <UserRound className="size-5 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-bold">No users found</p>
-                <p className="text-sm text-muted-foreground">
-                  {debouncedQuery
-                    ? `Nothing matched "${debouncedQuery}".`
-                    : "No users to show."}
-                </p>
-              </div>
+              <EmptyState
+                icon={UserRound}
+                title="No users found"
+                description={
+                  debouncedQuery ? `Nothing matched "${debouncedQuery}".` : "No users to show."
+                }
+                className="p-8"
+              />
             ) : (
               <ul className="divide-y divide-border">
                 {results.map((user) => {
@@ -177,13 +167,13 @@ export function UserPickerDialog({
                           "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
                           isExcluded
                             ? "cursor-not-allowed opacity-50"
-                            : "hover:bg-white/[0.04]",
+                            : "hover:bg-secondary",
                           isSelected && "bg-orange-400/[0.10]",
                         )}
                       >
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-black text-orange-100">
+                        <IconCircle tone="brand" size="size-9">
                           {userLabel(user, "?").slice(0, 2).toUpperCase()}
-                        </div>
+                        </IconCircle>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold">
                             {userLabel(user)}

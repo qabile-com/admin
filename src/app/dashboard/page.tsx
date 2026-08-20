@@ -14,6 +14,10 @@ import {
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { IconCircle } from "@/components/ui/icon-circle";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/stat-tile";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useOverview } from "@/hooks/use-overview";
 import { humanize, userLabel } from "@/lib/utils";
@@ -87,23 +91,13 @@ export default function DashboardOverviewPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((stat) => (
           <Link key={stat.label} href={stat.href} className="group">
-            <Card className="h-full transition-colors group-hover:border-orange-300/30">
-              <CardContent className="flex items-center justify-between p-5">
-                <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  {loading ? (
-                    <div className="mt-2 h-8 w-16 animate-pulse rounded-md bg-[var(--glass-2)]" />
-                  ) : (
-                    <p className="mt-2 text-3xl font-black">
-                      {(stat.value ?? 0).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-orange-400/10 text-orange-100">
-                  <stat.icon className="size-5" />
-                </div>
-              </CardContent>
-            </Card>
+            <StatTile
+              variant="card"
+              label={stat.label}
+              value={(stat.value ?? 0).toLocaleString()}
+              icon={stat.icon}
+              loading={loading}
+            />
           </Link>
         ))}
       </section>
@@ -173,27 +167,22 @@ export default function DashboardOverviewPage() {
             {loading ? (
               <div className="space-y-2">
                 {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="h-12 animate-pulse rounded-lg bg-[var(--glass-2)]"
-                  />
+                  <Skeleton key={i} className="h-12" />
                 ))}
               </div>
             ) : !overview?.admins?.length ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No admins found.
-              </p>
+              <EmptyState title="No admins found." className="py-8" />
             ) : (
               <ul className="space-y-1">
                 {overview.admins.map((admin) => (
                   <li key={admin.id}>
                     <Link
                       href={`/dashboard/users/${admin.id}`}
-                      className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-white/[0.04]"
+                      className="flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-secondary"
                     >
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-black text-orange-100">
+                      <IconCircle tone="brand" size="size-9">
                         {userLabel(admin, "?").slice(0, 2).toUpperCase()}
-                      </div>
+                      </IconCircle>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-bold">
                           {userLabel(admin)}

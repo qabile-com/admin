@@ -9,8 +9,10 @@ import {
   type ReactNode,
 } from "react";
 import { Loader2, ShieldAlert, TriangleAlert } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { IconCircle } from "@/components/ui/icon-circle";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/utils";
 
@@ -43,10 +45,10 @@ const VARIANT_ICON: Record<ConfirmVariant, typeof ShieldAlert> = {
   destructive: TriangleAlert,
 };
 
-const VARIANT_ICON_CLASS: Record<ConfirmVariant, string> = {
-  default: "bg-orange-400/10 text-orange-100",
-  warning: "bg-amber-400/10 text-amber-200",
-  destructive: "bg-red-400/10 text-red-300",
+const VARIANT_ICON_TONE: Record<ConfirmVariant, "brand" | "warning" | "danger"> = {
+  default: "brand",
+  warning: "warning",
+  destructive: "danger",
 };
 
 const VARIANT_BUTTON: Record<ConfirmVariant, "default" | "destructive"> = {
@@ -106,11 +108,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             </Dialog.Header>
             <Dialog.Body>
               <div className="flex gap-3">
-                <div
-                  className={`flex size-9 shrink-0 items-center justify-center rounded-full ${VARIANT_ICON_CLASS[variant]}`}
-                >
+                <IconCircle tone={VARIANT_ICON_TONE[variant]} size="size-9">
                   <Icon className="size-4" />
-                </div>
+                </IconCircle>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   {options.description}
                   {typedRequirement && (
@@ -134,11 +134,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   )}
                 </div>
               </div>
-              {error && (
-                <div className="mt-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                  {error}
-                </div>
-              )}
+              {error && <Alert className="mt-4">{error}</Alert>}
             </Dialog.Body>
             <Dialog.Footer>
               <div className="flex justify-end gap-2">

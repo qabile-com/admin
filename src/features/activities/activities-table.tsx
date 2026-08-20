@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableEmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -67,11 +69,7 @@ export function ActivitiesTable({
         </form>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error.message}
-          </div>
-        )}
+        {error && <Alert className="mb-4">{error.message}</Alert>}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -93,14 +91,7 @@ export function ActivitiesTable({
                   </TableCell>
                 </TableRow>
               ) : activities.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No activities found.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={4}>No activities found.</TableEmptyState>
               ) : (
                 activities.map((a) => (
                   <TableRow key={a.id}>

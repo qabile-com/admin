@@ -7,12 +7,13 @@ import {
   Loader2,
   Plus,
   Send,
-  TriangleAlert,
   X,
 } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IconCircle } from "@/components/ui/icon-circle";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SwitchField } from "@/components/ui/switch";
@@ -116,9 +117,9 @@ export function SendNotificationCard() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-orange-400/10 text-orange-100">
+            <IconCircle tone="brand" size="size-10" className="rounded-lg">
               <BellRing className="size-5" />
-            </div>
+            </IconCircle>
             <div>
               <CardTitle>Send push notification</CardTitle>
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -248,7 +249,7 @@ export function SendNotificationCard() {
                         aria-label={`Remove field ${index + 1}`}
                         onClick={() => removePair(index)}
                       >
-                        <X className="size-4 text-red-300" />
+                        <X className="size-4 text-destructive" />
                       </Button>
                     </div>
                   ))}
@@ -257,10 +258,7 @@ export function SendNotificationCard() {
             </div>
 
             {(validationError || error) && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-                <span>{validationError || error?.message}</span>
-              </div>
+              <Alert>{validationError || error?.message}</Alert>
             )}
 
             <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
@@ -291,9 +289,9 @@ export function SendNotificationCard() {
           <CardContent>
             <div className="rounded-xl border border-border bg-black/30 p-3">
               <div className="flex gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-400/15">
-                  <BellRing className="size-4 text-orange-100" />
-                </div>
+                <IconCircle tone="brand" size="size-9" className="rounded-lg">
+                  <BellRing className="size-4" />
+                </IconCircle>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">
                     {title || "Notification title"}
@@ -316,7 +314,7 @@ export function SendNotificationCard() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-300" />
+                <CheckCircle2 className="size-4 text-badge-success-text" />
                 <CardTitle className="text-sm">Last dispatch</CardTitle>
               </div>
             </CardHeader>

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Map as MapIcon, Plus, Search } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SwitchField } from "@/components/ui/switch";
@@ -94,13 +96,9 @@ export function RoadmapsTable({
       </CardHeader>
 
       <CardContent>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error.message}
-          </div>
-        )}
+        {error && <Alert className="mb-4">{error.message}</Alert>}
 
-        <div className="overflow-x-auto rounded-lg border border-white/5">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -127,24 +125,21 @@ export function RoadmapsTable({
               ) : roadmaps.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={6} className="p-0">
-                    <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-                      <div className="flex size-11 items-center justify-center rounded-full bg-secondary">
-                        <MapIcon className="size-5 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-bold">No roadmaps yet</p>
-                        <p className="text-sm text-muted-foreground">
-                          Create a roadmap, then add steps to it.
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setShowCreate(true)}
-                      >
-                        New roadmap
-                      </Button>
-                    </div>
+                    <EmptyState
+                      icon={MapIcon}
+                      title="No roadmaps yet"
+                      description="Create a roadmap, then add steps to it."
+                      className="px-6"
+                      action={
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setShowCreate(true)}
+                        >
+                          New roadmap
+                        </Button>
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -270,11 +265,7 @@ function CreateRoadmapDialog({
       </Dialog.Header>
       <Dialog.Body>
         <form id="roadmap-form" onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+          {error && <Alert>{error}</Alert>}
           <FormField label="Title" required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
           </FormField>

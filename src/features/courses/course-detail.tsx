@@ -13,12 +13,15 @@ import {
 } from "lucide-react";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { DetailPageHeader } from "@/components/layout/detail-page-header";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SwitchField } from "@/components/ui/switch";
 import {
   Table,
@@ -30,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useConfirm, useConfirmDelete } from "@/components/ui/confirm-dialog";
 import { useEntityDetail } from "@/hooks/use-entity-detail";
+import { useEntityForm } from "@/hooks/use-entity-form";
 import {
   deleteCourse,
   deleteEpisodesBatch,
@@ -69,7 +73,7 @@ export function CourseDetail({ id }: { id: string }) {
   const { entity, loading, notFound, error, setEntity } =
     useEntityDetail<AdminCourse>("courses", id, (params) => fetchCourses(params));
 
-  const [form, setForm] = useState<CourseInput | null>(null);
+  const { form, setForm, hasChanges, discard } = useEntityForm(entity, toFormState);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -78,10 +82,6 @@ export function CourseDetail({ id }: { id: string }) {
   const [loadingEpisodes, setLoadingEpisodes] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const episodesCancelledRef = useRef(false);
-
-  useEffect(() => {
-    if (entity) setForm(toFormState(entity));
-  }, [entity]);
 
   const loadEpisodes = useCallback(() => {
     episodesCancelledRef.current = false;
@@ -103,11 +103,8 @@ export function CourseDetail({ id }: { id: string }) {
     };
   }, [loadEpisodes]);
 
-  const hasChanges =
-    !!entity && !!form && JSON.stringify(form) !== JSON.stringify(toFormState(entity));
-
   const handleDiscard = () => {
-    if (entity) setForm(toFormState(entity));
+    discard();
     setSaveError("");
   };
 
@@ -204,16 +201,12 @@ export function CourseDetail({ id }: { id: string }) {
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-secondary">
-              <BookOpen className="size-5 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold">Course not found</p>
-              <p className="text-sm text-muted-foreground">
-                It may have been deleted, or the link is out of date.
-              </p>
-            </div>
+          <CardContent>
+            <EmptyState
+              icon={BookOpen}
+              title="Course not found"
+              description="It may have been deleted, or the link is out of date."
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -232,9 +225,13 @@ export function CourseDetail({ id }: { id: string }) {
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <TriangleAlert className="size-6 text-red-300" />
-            <p className="text-sm text-muted-foreground">{error.message}</p>
+          <CardContent>
+            <EmptyState
+              icon={TriangleAlert}
+              iconTone="danger"
+              title="Couldn't load course"
+              description={error.message}
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -270,8 +267,8 @@ export function CourseDetail({ id }: { id: string }) {
     >
       {loading || !entity || !form ? (
         <div className="space-y-4">
-          <div className="h-64 animate-pulse rounded-xl bg-[var(--glass-2)]" />
-          <div className="h-40 animate-pulse rounded-xl bg-[var(--glass-2)]" />
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -280,11 +277,7 @@ export function CourseDetail({ id }: { id: string }) {
               <CardTitle>Course details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {saveError && (
-                <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                  {saveError}
-                </div>
-              )}
+              {saveError && <Alert>{saveError}</Alert>}
               <FormField label="Title" required>
                 <Input
                   value={form.title}
@@ -429,15 +422,13 @@ export function CourseDetail({ id }: { id: string }) {
               {loadingEpisodes ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-14 animate-pulse rounded-lg bg-[var(--glass-2)]" />
+                    <Skeleton key={i} className="h-14" />
                   ))}
                 </div>
               ) : episodes.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  No episodes yet.
-                </p>
+                <EmptyState title="No episodes yet." className="py-8" />
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-white/5">
+                <div className="overflow-x-auto rounded-lg border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>

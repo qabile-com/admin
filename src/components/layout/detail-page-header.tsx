@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Full-block header for a `/dashboard/{resource}/[id]` detail page: a back
@@ -39,7 +40,7 @@ export function DetailPageHeader({
         </Link>
         <h1 className="flex flex-wrap items-center gap-3 text-2xl font-black tracking-normal sm:text-3xl">
           {loading ? (
-            <span className="h-8 w-56 animate-pulse rounded-md bg-[var(--glass-2)]" />
+            <Skeleton className="h-8 w-56 rounded-md" />
           ) : (
             <span className="truncate">{title}</span>
           )}

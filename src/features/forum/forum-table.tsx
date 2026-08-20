@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Pin, PinOff, Trash2, ChevronRight, Heart } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableEmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -128,12 +130,8 @@ export function ForumTable({
       <CardContent>
         {activeTab === "posts" && (
           <>
-            {postsError && (
-              <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                {postsError.message}
-              </div>
-            )}
-            <div className="overflow-x-auto rounded-lg border border-white/5">
+            {postsError && <Alert className="mb-4">{postsError.message}</Alert>}
+            <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -157,14 +155,7 @@ export function ForumTable({
                       </TableCell>
                     </TableRow>
                   ) : posts.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="py-8 text-center text-muted-foreground"
-                      >
-                        No posts found.
-                      </TableCell>
-                    </TableRow>
+                    <TableEmptyState colSpan={7}>No posts found.</TableEmptyState>
                   ) : (
                     posts.map((post) => (
                       <TableRow
@@ -214,7 +205,7 @@ export function ForumTable({
                               aria-label="Delete post"
                               onClick={() => handleDeletePost(post)}
                             >
-                              <Trash2 className="size-4 text-red-300" />
+                              <Trash2 className="size-4 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
@@ -258,12 +249,8 @@ export function ForumTable({
 
         {activeTab === "blocks" && (
           <>
-            {blocksHook.error && (
-              <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                {blocksHook.error.message}
-              </div>
-            )}
-            <div className="overflow-x-auto rounded-lg border border-white/5">
+            {blocksHook.error && <Alert className="mb-4">{blocksHook.error.message}</Alert>}
+            <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -283,14 +270,7 @@ export function ForumTable({
                       </TableCell>
                     </TableRow>
                   ) : blocksHook.blocks.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="py-8 text-center text-muted-foreground"
-                      >
-                        No blocks found.
-                      </TableCell>
-                    </TableRow>
+                    <TableEmptyState colSpan={3}>No blocks found.</TableEmptyState>
                   ) : (
                     blocksHook.blocks.map((block) => (
                       <TableRow key={block.id}>

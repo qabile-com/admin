@@ -4,11 +4,11 @@ import { cn } from '@/lib/utils';
 type BadgeVariant = 'default' | 'success' | 'warning' | 'muted' | 'danger';
 
 const variants: Record<BadgeVariant, string> = {
-  default: 'border-orange-300/25 bg-orange-400/10 text-orange-100',
-  success: 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100',
-  warning: 'border-amber-300/25 bg-amber-400/10 text-amber-100',
-  muted: 'border-white/10 bg-white/5 text-muted-foreground',
-  danger: 'border-red-300/25 bg-red-400/10 text-red-100',
+  default: 'border-badge-default-border bg-badge-default-bg text-badge-default-text',
+  success: 'border-badge-success-border bg-badge-success-bg text-badge-success-text',
+  warning: 'border-badge-warning-border bg-badge-warning-bg text-badge-warning-text',
+  muted: 'border-border bg-secondary text-muted-foreground',
+  danger: 'border-badge-danger-border bg-badge-danger-bg text-badge-danger-text',
 };
 
 export function Badge({

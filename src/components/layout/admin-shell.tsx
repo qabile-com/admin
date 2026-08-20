@@ -19,9 +19,12 @@ import {
   X,
   Timer,
   UsersRound,
-  // BellRing,
+  BellRing,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconCircle } from "@/components/ui/icon-circle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn, humanize, userLabel } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
@@ -48,12 +51,12 @@ const navItems: NavItem[] = [
     icon: BookOpen,
     activeKey: "courses",
   },
-  // {
-  //   href: "/dashboard/notifications",
-  //   label: "Notifications",
-  //   icon: BellRing,
-  //   activeKey: "notifications",
-  // },
+  {
+    href: "/dashboard/notifications",
+    label: "Notifications",
+    icon: BellRing,
+    activeKey: "notifications",
+  },
   {
     href: "/dashboard/forum-cooldown",
     label: "Forum Cooldown",
@@ -84,6 +87,12 @@ const secondaryNavItems: NavItem[] = [
     label: "XP Rules",
     icon: Zap,
     activeKey: "xp-rules",
+  },
+  {
+    href: "/dashboard/rebirth-rules",
+    label: "Rebirth Rules",
+    icon: Sparkles,
+    activeKey: "rebirth-rules",
   },
   {
     href: "/dashboard/forum",
@@ -146,7 +155,7 @@ export function AdminShell({
   return (
     <div className="min-h-dvh">
       {/* Desktop Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r bg-black/20 p-4 backdrop-blur-xl lg:flex lg:flex-col overflow-y-auto">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r bg-black/20 p-4 backdrop-blur-xl md:flex md:flex-col overflow-y-auto">
         <div className="flex h-full flex-col">
           <Link
             href="/dashboard"
@@ -215,9 +224,9 @@ export function AdminShell({
 
           {user && (
             <div className="mt-auto flex items-center gap-3 rounded-xl border border-border bg-black/20 p-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-400/15 text-xs font-black text-orange-100">
+              <IconCircle tone="brand" size="size-9">
                 {userLabel(user, "?").slice(0, 2).toUpperCase()}
-              </div>
+              </IconCircle>
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold">{userLabel(user)}</p>
                 <p className="truncate text-xs text-muted-foreground">
@@ -231,7 +240,7 @@ export function AdminShell({
 
       {/* Mobile menu overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 md:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -315,7 +324,7 @@ export function AdminShell({
       )}
 
       {/* Main content */}
-      <main className="lg:pl-72">
+      <main className="md:pl-72">
         <header className="sticky top-0 z-10 border-b bg-background/72 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -323,7 +332,7 @@ export function AdminShell({
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden"
+                className="md:hidden"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open menu"
               >
@@ -335,9 +344,9 @@ export function AdminShell({
                   alt="Qabile phoenix badge"
                   width={38}
                   height={38}
-                  className="rounded-lg hidden lg:block"
+                  className="rounded-lg hidden md:block"
                 />
-                <span className="text-sm font-extrabold lg:hidden">
+                <span className="text-sm font-extrabold md:hidden">
                   Qabile Admin
                 </span>
               </div>
@@ -353,6 +362,7 @@ export function AdminShell({
                   </p>
                 </div>
               )}
+              <ThemeToggle />
               <Button
                 variant="secondary"
                 size="sm"
@@ -372,7 +382,7 @@ export function AdminShell({
           {header ?? (
             <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-xs font-bold text-orange-100">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-badge-default-bg px-3 py-1 text-xs font-bold text-badge-default-text">
                   <Flame className="size-3.5" />
                   Admin workspace
                 </div>

@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ListChecks, Trash2, TriangleAlert } from "lucide-react";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { DetailPageHeader } from "@/components/layout/detail-page-header";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChecklistEditor, type ChecklistItem } from "@/components/ui/checklist-editor";
 import { useConfirmDelete } from "@/components/ui/confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useEntityDetail } from "@/hooks/use-entity-detail";
+import { useEntityForm } from "@/hooks/use-entity-form";
 import {
   createRoadmapStep,
   deleteRoadmapStep,
@@ -72,22 +76,17 @@ export function StepDetail({
     xpReward: 0,
   };
 
-  const [form, setForm] = useState<RoadmapStepInput>(emptyForm);
+  const { form, setForm, hasChanges, discard } = useEntityForm(
+    entity,
+    (step) => toFormState(roadmapId, step),
+    { emptyForm, isCreate },
+  );
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  useEffect(() => {
-    if (entity) setForm(toFormState(roadmapId, entity));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity]);
-
-  const hasChanges = isCreate
-    ? true
-    : !!entity && JSON.stringify(form) !== JSON.stringify(toFormState(roadmapId, entity));
-
   const handleDiscard = () => {
-    if (entity) setForm(toFormState(roadmapId, entity));
+    discard();
     setSaveError("");
   };
 
@@ -130,16 +129,12 @@ export function StepDetail({
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-secondary">
-              <ListChecks className="size-5 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold">Step not found</p>
-              <p className="text-sm text-muted-foreground">
-                It may have been deleted, or the link is out of date.
-              </p>
-            </div>
+          <CardContent>
+            <EmptyState
+              icon={ListChecks}
+              title="Step not found"
+              description="It may have been deleted, or the link is out of date."
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -154,9 +149,13 @@ export function StepDetail({
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <TriangleAlert className="size-6 text-red-300" />
-            <p className="text-sm text-muted-foreground">{error.message}</p>
+          <CardContent>
+            <EmptyState
+              icon={TriangleAlert}
+              iconTone="danger"
+              title="Couldn't load step"
+              description={error.message}
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -194,18 +193,14 @@ export function StepDetail({
       }
     >
       {stillLoading ? (
-        <div className="h-96 animate-pulse rounded-xl bg-[var(--glass-2)]" />
+        <Skeleton className="h-96 rounded-xl" />
       ) : (
         <Card>
           <CardHeader>
             <CardTitle>Step details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {saveError && (
-              <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                {saveError}
-              </div>
-            )}
+            {saveError && <Alert>{saveError}</Alert>}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField label="Number" required>
                 <Input

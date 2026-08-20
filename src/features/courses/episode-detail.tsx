@@ -5,17 +5,21 @@ import { useRouter } from "next/navigation";
 import { CheckCircle, Clapperboard, Trash2, TriangleAlert, XCircle } from "lucide-react";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { DetailPageHeader } from "@/components/layout/detail-page-header";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChecklistEditor, type ChecklistItem } from "@/components/ui/checklist-editor";
 import { useConfirm, useConfirmDelete } from "@/components/ui/confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SaveDiscardBar } from "@/components/ui/save-discard-bar";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SwitchField } from "@/components/ui/switch";
 import { useEntityDetail } from "@/hooks/use-entity-detail";
+import { useEntityForm } from "@/hooks/use-entity-form";
 import {
   createEpisode,
   deleteComment,
@@ -82,21 +86,16 @@ export function EpisodeDetail({
     (params) => fetchEpisodes(courseId, params),
   );
 
-  const [form, setForm] = useState<EpisodeInput>(EMPTY_FORM);
+  const { form, setForm, hasChanges, discard } = useEntityForm(entity, toFormState, {
+    emptyForm: EMPTY_FORM,
+    isCreate,
+  });
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  useEffect(() => {
-    if (entity) setForm(toFormState(entity));
-  }, [entity]);
-
-  const hasChanges = isCreate
-    ? true
-    : !!entity && JSON.stringify(form) !== JSON.stringify(toFormState(entity));
-
   const handleDiscard = () => {
-    if (entity) setForm(toFormState(entity));
+    discard();
     setSaveError("");
   };
 
@@ -143,16 +142,12 @@ export function EpisodeDetail({
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-secondary">
-              <Clapperboard className="size-5 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold">Episode not found</p>
-              <p className="text-sm text-muted-foreground">
-                It may have been deleted, or the link is out of date.
-              </p>
-            </div>
+          <CardContent>
+            <EmptyState
+              icon={Clapperboard}
+              title="Episode not found"
+              description="It may have been deleted, or the link is out of date."
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -171,9 +166,13 @@ export function EpisodeDetail({
         }
       >
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <TriangleAlert className="size-6 text-red-300" />
-            <p className="text-sm text-muted-foreground">{error.message}</p>
+          <CardContent>
+            <EmptyState
+              icon={TriangleAlert}
+              iconTone="danger"
+              title="Couldn't load episode"
+              description={error.message}
+            />
           </CardContent>
         </Card>
       </AdminShell>
@@ -213,7 +212,7 @@ export function EpisodeDetail({
     >
       {stillLoading ? (
         <div className="space-y-4">
-          <div className="h-64 animate-pulse rounded-xl bg-[var(--glass-2)]" />
+          <Skeleton className="h-64 rounded-xl" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -222,11 +221,7 @@ export function EpisodeDetail({
               <CardTitle>Episode details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {saveError && (
-                <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-                  {saveError}
-                </div>
-              )}
+              {saveError && <Alert>{saveError}</Alert>}
               <FormField label="Title" required>
                 <Input
                   value={form.title}
@@ -438,15 +433,13 @@ function CommentsCard({
         {loading ? (
           <div className="space-y-2">
             {[0, 1].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--glass-2)]" />
+              <Skeleton key={i} className="h-16" />
             ))}
           </div>
         ) : error ? (
-          <p className="py-4 text-center text-sm text-red-300">{error}</p>
+          <Alert>{error}</Alert>
         ) : comments.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No comments yet.
-          </p>
+          <EmptyState title="No comments yet." className="py-8" />
         ) : (
           <div className="space-y-2">
             {comments.map((c) => (

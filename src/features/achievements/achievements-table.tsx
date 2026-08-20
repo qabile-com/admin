@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableEmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -96,13 +98,9 @@ export function AchievementsTable({
         </form>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error.message}
-          </div>
-        )}
+        {error && <Alert className="mb-4">{error.message}</Alert>}
 
-        <div className="overflow-x-auto rounded-lg border border-white/5">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -125,14 +123,7 @@ export function AchievementsTable({
                   </TableCell>
                 </TableRow>
               ) : achievements.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No achievements found.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={6}>No achievements found.</TableEmptyState>
               ) : (
                 achievements.map((a) => (
                   <TableRow key={a.id}>
@@ -163,7 +154,7 @@ export function AchievementsTable({
                           aria-label="Delete achievement"
                           onClick={() => handleDelete(a)}
                         >
-                          <Trash2 className="size-4 text-red-300" />
+                          <Trash2 className="size-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -240,6 +231,10 @@ function AchievementDialog({
 }) {
   const isEdit = !!achievement;
 
+  // Seeded directly from props rather than via useEntityForm: the parent remounts this
+  // dialog with key={editDialog?.id} on every open, and these fields derive from
+  // achievement (trigger preset vs. custom trigger, JSON-stringified config) rather than
+  // mapping 1:1 to it, so the simpler entity->form hook doesn't fit here.
   const initialTriggerType = achievement?.triggerType ?? TRIGGER_PRESETS[0];
   const isKnownTrigger = TRIGGER_PRESETS.includes(initialTriggerType);
 
@@ -317,11 +312,7 @@ function AchievementDialog({
       </Dialog.Header>
       <Dialog.Body>
         <form id="achievement-form" onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+          {error && <Alert>{error}</Alert>}
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Slug" required>
               <Input value={slug} onChange={(e) => setSlug(e.target.value)} required />
@@ -392,7 +383,7 @@ function AchievementDialog({
             />
           </FormField>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="flex items-center gap-2 text-sm">
               <Switch checked={isActive} onCheckedChange={setIsActive} aria-label="Active" />
               Active

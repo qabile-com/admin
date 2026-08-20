@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Search, UserPlus } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableEmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -85,13 +87,9 @@ export function BdUsersTable({
         </form>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error.message}
-          </div>
-        )}
+        {error && <Alert className="mb-4">{error.message}</Alert>}
 
-        <div className="overflow-x-auto rounded-lg border border-white/5">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -114,14 +112,7 @@ export function BdUsersTable({
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No BD users found.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={6}>No BD users found.</TableEmptyState>
               ) : (
                 users.map((user) => (
                   <TableRow

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Search, UserPlus, Trash2 } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableEmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -99,12 +101,8 @@ export function AdminsTable({
         </form>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-            {error.message}
-          </div>
-        )}
-        <div className="overflow-x-auto rounded-lg border border-white/5">
+        {error && <Alert className="mb-4">{error.message}</Alert>}
+        <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -126,14 +124,7 @@ export function AdminsTable({
                   </TableCell>
                 </TableRow>
               ) : admins.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    No admins found.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={5}>No admins found.</TableEmptyState>
               ) : (
                 admins.map((admin) => (
                   <TableRow key={admin.id}>
@@ -150,7 +141,7 @@ export function AdminsTable({
                         aria-label="Remove admin"
                         onClick={() => handleDelete(admin)}
                       >
-                        <Trash2 className="size-4 text-red-300" />
+                        <Trash2 className="size-4 text-destructive" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -239,11 +230,7 @@ function CreateAdminDialog({
       </Dialog.Header>
       <Dialog.Body>
         <form id="add-admin-form" onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg border border-red-300/25 bg-red-400/10 p-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+          {error && <Alert>{error}</Alert>}
           <FormField label="Name" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </FormField>
