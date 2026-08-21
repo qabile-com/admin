@@ -19,7 +19,7 @@ import {
   X,
   Timer,
   UsersRound,
-  BellRing,
+  // BellRing,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,12 +51,12 @@ const navItems: NavItem[] = [
     icon: BookOpen,
     activeKey: "courses",
   },
-  {
-    href: "/dashboard/notifications",
-    label: "Notifications",
-    icon: BellRing,
-    activeKey: "notifications",
-  },
+  // {
+  //   href: "/dashboard/notifications",
+  //   label: "Notifications",
+  //   icon: BellRing,
+  //   activeKey: "notifications",
+  // },
   {
     href: "/dashboard/forum-cooldown",
     label: "Forum Cooldown",
